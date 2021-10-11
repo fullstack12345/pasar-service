@@ -29,8 +29,8 @@ app.use('/pasar/api/v1', pasarApi);
 jobs.run()
 
 log4js.configure({
-    appenders: { filda: { type: 'dateFile', filename: 'logs/filda.log', pattern: ".yyyy-MM-dd.log", compress: true, }},
-    categories: { default: { appenders: ['filda'], level: 'info'}},
+    appenders: { pasar: { type: 'dateFile', filename: 'logs/pasar.log', pattern: ".yyyy-MM-dd.log", compress: true, }},
+    categories: { default: { appenders: ['pasar'], level: 'info'}},
     pm2: true,
     pm2InstanceVar: 'INSTANCE_ID'
 });

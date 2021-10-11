@@ -31,7 +31,7 @@ module.exports = {
                 } else {
                     let orderInfo = event.returnValues;
                     let pasarOrder = {orderId: orderInfo._orderId, event: event.event, seller: orderInfo._seller,
-                        tokenId: orderInfo._tokenId, amount: orderInfo._amount, price: orderInfo._price, isTokenInfoSynced: false}
+                        tokenId: orderInfo._tokenId, amount: orderInfo._amount, price: orderInfo._price}
 
                     let orderEventDetail = {orderId: orderInfo._orderId, event: event.event, blockNumber: event.blockNumber,
                         tHash: event.transactionHash, tIndex: event.transactionIndex, blockHash: event.blockHash,
@@ -43,7 +43,7 @@ module.exports = {
             })
         });
 
-        let orderFilledJobId = schedule.scheduleJob(new Date(now + 2*60*1000), async () => {
+        let orderFilledJobId = schedule.scheduleJob(new Date(now + 2 * 60 * 1000), async () => {
             logger.info("[OrderFilled] Sync Starting ...")
             let lastHeight = await pasarDbService.getLastPasarOrderSyncHeight('OrderFilled');
             pasarContract.events.OrderFilled({fromBlock: lastHeight + 1}, function (error, event) {
@@ -65,7 +65,7 @@ module.exports = {
             })
         });
 
-        let orderCanceledJobId = schedule.scheduleJob(new Date(now + 2*60*1000), async () => {
+        let orderCanceledJobId = schedule.scheduleJob(new Date(now + 2 * 60 * 1000), async () => {
             logger.info("[OrderCanceled] Sync Starting ...")
             let lastHeight = await pasarDbService.getLastPasarOrderSyncHeight('OrderCanceled');
             pasarContract.events.OrderCanceled({fromBlock: lastHeight + 1}, function (error, event) {
@@ -85,7 +85,7 @@ module.exports = {
             })
         });
 
-        let orderPriceChangedJobId = schedule.scheduleJob(new Date(now + 3*60*1000), async () => {
+        let orderPriceChangedJobId = schedule.scheduleJob(new Date(now + 3 * 60 * 1000), async () => {
             logger.info("[OrderPriceChanged] Sync Starting ...")
             let lastHeight = await pasarDbService.getLastPasarOrderSyncHeight('OrderPriceChanged');
             pasarContract.events.OrderPriceChanged({fromBlock: lastHeight + 1}, function (error, event) {
@@ -105,30 +105,34 @@ module.exports = {
             })
         });
 
-        schedule.scheduleJob({start: new Date(now + 60 * 5 * 1000), rule: '0 */2 * * * *'}, () => {
-            logger.info("[TokenInfo] Sync Starting ...")
-            pasarDbService.getSynchronizedToken().then(result => {
-                result.forEach(item => {
-                    let tokenId = item.tokenId;
-                    stickerContract.methods.tokenInfo(tokenId).call().then(async result => {
-                        let tokenCID = result.tokenUri.split(":")[2];
-                        let token = {tokenId, quantity: result.tokenSupply, royalties:result.royaltyFee,
-                            royaltyOwner: result.royaltyOwner, createTime: result.createTime, updateTime: result.updateTime}
+        schedule.scheduleJob({start: new Date(now + 60 * 1000), rule: '0 */2 * * * *'}, async () => {
+            let tokenIndex = await pasarDbService.getSynchronizedTokenIndex();
 
-                        let response = await fetch(config.ipfsNodeUrl + tokenCID);
-                        let data = await response.json();
-                        token.kind = data.kind;
-                        token.type = data.type;
-                        token.asset = data.image;
-                        token.name = data.name;
-                        token.description = data.description;
-                        token.thumbnail = data.thumbnail;
+            logger.info(`[TokenInfo] Sync Starting ... from index ${tokenIndex + 1}`)
 
-                        await pasarDbService.replaceToken(token);
-                        await pasarDbService.updateOrderTokenSync(item.orderId);
-                    });
-                })
-            })
+            for(let i = tokenIndex + 1; i < tokenIndex + 10; i++) {
+                try {
+                    let tokenId = await stickerContract.methods.tokenIdByIndex(i).call();
+                    let result = await stickerContract.methods.tokenInfo(tokenId).call();
+                    let token = {tokenIndex: i, tokenId, quantity: result.tokenSupply, royalties:result.royaltyFee,
+                        royaltyOwner: result.royaltyOwner, createTime: result.createTime, updateTime: result.updateTime}
+
+                    let tokenCID = result.tokenUri.split(":")[2];
+
+                    let response = await fetch(config.ipfsNodeUrl + tokenCID);
+                    let data = await response.json();
+                    token.kind = data.kind;
+                    token.type = data.type;
+                    token.asset = data.image;
+                    token.name = data.name;
+                    token.description = data.description;
+                    token.thumbnail = data.thumbnail;
+
+                    await pasarDbService.replaceToken(token);
+                } catch (e) {
+                    break;
+                }
+            }
         });
 
         schedule.scheduleJob({start: new Date(now + 61 * 1000), rule: '0 */2 * * * *'}, () => {

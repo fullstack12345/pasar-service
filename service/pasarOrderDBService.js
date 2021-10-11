@@ -22,12 +22,17 @@ module.exports = {
         }
     },
 
-    getSynchronizedToken: async function () {
+    getSynchronizedTokenIndex: async function () {
         let mongoClient = new MongoClient(config.mongodb, {useNewUrlParser: true, useUnifiedTopology: true});
         try {
             await mongoClient.connect();
-            const collection = mongoClient.db(config.dbName).collection('pasar_order');
-            return await collection.find({isTokenInfoSynced: false}).limit(10).toArray();
+            const collection = mongoClient.db(config.dbName).collection('pasar_token');
+            let doc = await collection.findOne({}, {sort:{tokenIndex: -1}});
+            if(doc) {
+                return doc.tokenIndex
+            } else {
+                return -1;
+            }
         } catch (err) {
             logger.error(err);
             throw new Error();
@@ -85,20 +90,6 @@ module.exports = {
             await mongoClient.connect();
             const collection = mongoClient.db(config.dbName).collection('pasar_order');
             return await collection.updateOne({orderId, event: 'OrderForSale'}, { $set: rest});
-        } catch (err) {
-            logger.error(err);
-            throw new Error();
-        } finally {
-            await mongoClient.close();
-        }
-    },
-
-    updateOrderTokenSync: async function (orderId) {
-        let mongoClient = new MongoClient(config.mongodb, {useNewUrlParser: true, useUnifiedTopology: true});
-        try {
-            await mongoClient.connect();
-            const collection = mongoClient.db(config.dbName).collection('pasar_order');
-            return await collection.updateOne({orderId}, { $set: {isTokenInfoSynced: true}});
         } catch (err) {
             logger.error(err);
             throw new Error();
