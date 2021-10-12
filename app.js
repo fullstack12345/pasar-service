@@ -8,6 +8,7 @@ let indexRouter = require('./routes/index');
 let indexRouterV2 = require('./routes/indexV2');
 let indexRouterV3 = require('./routes/indexV3');
 let pasarApi = require('./routes/pasarApi');
+let miscApi = require('./routes/miscApi');
 let jobs = require('./jobs');
 let log4js = require('log4js');
 
@@ -25,6 +26,7 @@ app.use('/feeds/api/v1', indexRouter);
 app.use('/feeds/api/v2', indexRouterV2);
 app.use('/feeds/api/v3', indexRouterV3);
 app.use('/pasar/api/v1', pasarApi);
+app.use('/misc/api/v1', miscApi);
 
 jobs.run()
 

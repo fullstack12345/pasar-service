@@ -4,13 +4,13 @@ let dbService = require('../service/indexDBService');
 let pasarOrder = require('../service/pasarOrderDBService');
 
 router.post('/register', function(req, res) {
-    let ntfToken = req.body;
-    if(!ntfToken.tokenId || !ntfToken.name ) {
+    let nftToken = req.body;
+    if(!nftToken.tokenId || !nftToken.name ) {
         res.json({code: 400, message: 'required parameter absence'})
         return;
     }
 
-    dbService.registerNFT(ntfToken).then(result => {
+    dbService.registerNFT(nftToken).then(result => {
         res.json(result);
     }).catch(error => {
         console.log(error);

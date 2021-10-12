@@ -126,4 +126,20 @@ module.exports = {
             await mongoClient.close();
         }
     },
+
+    listStickers: async function(pageNum, pageSize) {
+        let client = new MongoClient(config.mongodb, {useNewUrlParser: true, useUnifiedTopology: true});
+        try {
+            await client.connect();
+            const collection = client.db(config.dbName).collection('pasar_token');
+            let total = await collection.find().count();
+            let result = await collection.find().sort({tokenIndex: -1}).project({"_id": 0}).limit(pageSize).skip((pageNum-1)*pageSize).toArray();
+            return {code: 200, message: 'success', data: {total, result}};
+        } catch (err) {
+            logger.error(err);
+            return {code: 500, message: 'server error'};
+        } finally {
+            await client.close();
+        }
+    },
 }

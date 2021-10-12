@@ -39,7 +39,7 @@ pm2 start bin/www
 
 ## API
 
-调用URL: https://www.trinity-tech.io/feeds/api/v1
+调用URL: https://example.com/feeds/api/v1
 
 1. 注册
 
@@ -122,7 +122,7 @@ response:     {"code": 200, "message": "success", data: {...}}  数据存在
 
 ## API V2
 
-调用URL: https://www.trinity-tech.io/feeds/api/v2
+调用URL: https://example.com/feeds/api/v2
 
 1. 注册
 
@@ -244,7 +244,7 @@ response:     {"code": 200, "message": "success", data: {...}}  数据存在
 
 ## NFT Token API
 
-调用URL: https://www.trinity-tech.io/pasar/api/v1
+调用URL: https://example.com/pasar/api/v1
 
 1. 注册
 
@@ -310,6 +310,23 @@ response:     {"code": 200, "message": "success", data: {total: 100, result: [{}
 
 ```
 url:          /listPasarOrder
+method:       GET
+parameter:    pageNum (页码 从1开始 选填 默认1)
+              pageSize (每页条目 大于0 选填 默认10)
+              
+response:     {"code": 200, "message": "success", data: {total: 100, result: [{}, ...]}}  成功
+              {"code": 400, "message": <descripton>}  参数错误
+              {"code": 500, "message": <descripton>}  服务器错误
+```
+
+## Other Apis
+
+调用URL: https://example.com/misc/api/v1
+
+1. (分页)获取 stickers
+
+```
+url:          /listStickers
 method:       GET
 parameter:    pageNum (页码 从1开始 选填 默认1)
               pageSize (每页条目 大于0 选填 默认10)
