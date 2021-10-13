@@ -1,6 +1,6 @@
 let express = require('express');
 let router = express.Router();
-let pasarOrder = require('../service/pasarOrderDBService');
+let stickerDBService = require('../service/stickerDBService');
 
 router.get('/listStickers', function(req, res) {
     let pageNumStr = req.query.pageNum;
@@ -22,7 +22,23 @@ router.get('/listStickers', function(req, res) {
         return;
     }
 
-    pasarOrder.listStickers(pageNum, pageSize).then(result => {
+    stickerDBService.listStickers(pageNum, pageSize).then(result => {
+        res.json(result);
+    }).catch(error => {
+        console.log(error);
+        res.json({code: 500, message: 'server error'});
+    })
+});
+
+router.get('/search', function(req, res) {
+    let keyword = req.query.key;
+
+    if(!keyword) {
+        res.json({code: 400, message: 'bad request'})
+        return;
+    }
+
+    stickerDBService.query(keyword).then(result => {
         res.json(result);
     }).catch(error => {
         console.log(error);

@@ -319,9 +319,9 @@ response:     {"code": 200, "message": "success", data: {total: 100, result: [{}
               {"code": 500, "message": <descripton>}  服务器错误
 ```
 
-## Other Apis
+## Sticker Api
 
-调用URL: https://example.com/misc/api/v1
+调用URL: https://example.com/sticker/api/v1
 
 1. (分页)获取 stickers
 
@@ -330,6 +330,18 @@ url:          /listStickers
 method:       GET
 parameter:    pageNum (页码 从1开始 选填 默认1)
               pageSize (每页条目 大于0 选填 默认10)
+              
+response:     {"code": 200, "message": "success", data: {total: 100, result: [{}, ...]}}  成功
+              {"code": 400, "message": <descripton>}  参数错误
+              {"code": 500, "message": <descripton>}  服务器错误
+```
+
+2. 搜索 stickers
+
+```
+url:          /search
+method:       GET
+parameter:    key (搜索关键字 必填 可以根据 tokenId royaltyOwner 字段进行精确匹配，或者根据 name description 进行模糊搜索)
               
 response:     {"code": 200, "message": "success", data: {total: 100, result: [{}, ...]}}  成功
               {"code": 400, "message": <descripton>}  参数错误

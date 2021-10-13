@@ -1,7 +1,7 @@
 let express = require('express');
 let router = express.Router();
-let dbService = require('../service/indexDBService');
-let pasarOrder = require('../service/pasarOrderDBService');
+let indexDBService = require('../service/indexDBService');
+let pasarDBService = require('../service/pasarDBService');
 
 router.post('/register', function(req, res) {
     let nftToken = req.body;
@@ -10,7 +10,7 @@ router.post('/register', function(req, res) {
         return;
     }
 
-    dbService.registerNFT(nftToken).then(result => {
+    indexDBService.registerNFT(nftToken).then(result => {
         res.json(result);
     }).catch(error => {
         console.log(error);
@@ -25,7 +25,7 @@ router.get('/get', function(req, res) {
         return;
     }
 
-    dbService.getNFT(tokenId).then(result => {
+    indexDBService.getNFT(tokenId).then(result => {
         res.json(result);
     }).catch(error => {
         console.log(error);
@@ -40,7 +40,7 @@ router.get('/remove', function(req, res) {
         return;
     }
 
-    dbService.removeNFT(tokenId).then(result => {
+    indexDBService.removeNFT(tokenId).then(result => {
         res.json(result);
     }).catch(error => {
         console.log(error);
@@ -74,7 +74,7 @@ router.get('/list', function(req, res) {
         return;
     }
 
-    dbService.listNFT(pageNum, pageSize).then(result => {
+    indexDBService.listNFT(pageNum, pageSize).then(result => {
         res.json(result);
     }).catch(error => {
         console.log(error);
@@ -108,7 +108,7 @@ router.get('/listPasarOrder', function(req, res) {
         return;
     }
 
-    pasarOrder.listPasarOrder(pageNum, pageSize).then(result => {
+    pasarDBService.listPasarOrder(pageNum, pageSize).then(result => {
         res.json(result);
     }).catch(error => {
         console.log(error);

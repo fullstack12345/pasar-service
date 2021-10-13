@@ -1,6 +1,6 @@
 const schedule = require('node-schedule');
 let Web3 = require('web3');
-let pasarDbService = require('./service/pasarOrderDBService');
+let pasarDBService = require('./service/pasarDBService');
 let config = require('./config');
 let pasarContractABI = require('./pasarABI');
 let stickerContractABI = require('./stickerABI');
@@ -30,7 +30,7 @@ module.exports = {
         let orderForSaleJobId = schedule.scheduleJob(new Date(now + 60 * 1000), async () => {
             logger.info("[OrderForSale] Sync Starting ...")
             isGetForSaleOrderJobRun = true;
-            let lastHeight = await pasarDbService.getLastPasarOrderSyncHeight('OrderForSale');
+            let lastHeight = await pasarDBService.getLastPasarOrderSyncHeight('OrderForSale');
             logger.info("[OrderForSale] Sync last height: " + lastHeight)
             pasarContract.events.OrderForSale({
                 fromBlock: lastHeight + 1
@@ -47,79 +47,78 @@ module.exports = {
                     tHash: event.transactionHash, tIndex: event.transactionIndex, blockHash: event.blockHash,
                     logIndex: event.logIndex, removed: event.removed, id: event.id}
 
-                pasarDbService.insertOrderEvent(orderEventDetail);
-                pasarDbService.insertOrder(pasarOrder);
+                pasarDBService.insertOrderEvent(orderEventDetail);
+                pasarDBService.insertOrder(pasarOrder);
             })
         });
 
         let orderFilledJobId = schedule.scheduleJob(new Date(now + 2 * 60 * 1000), async () => {
             logger.info("[OrderFilled] Sync Starting ...")
-            let lastHeight = await pasarDbService.getLastPasarOrderSyncHeight('OrderFilled');
+            let lastHeight = await pasarDBService.getLastPasarOrderSyncHeight('OrderFilled');
             pasarContract.events.OrderFilled({
                 fromBlock: lastHeight + 1
             }).on("error", function (error) {
-                logger.info("[OrderFilled] Sync Ending ...")
+                logger.info(error);
+                logger.info("[OrderFilled] Sync Ending ...");
             }).on("data", function (event) {
                 let orderInfo = event.returnValues;
                 let pasarOrder = {orderId: orderInfo._orderId, event: event.event, seller: orderInfo._seller,
                     buyer: orderInfo._buyer, copyrightOwner: orderInfo._copyrightOwner, price: orderInfo._price,
-                    royalty: orderInfo._royalty}
+                    royalty: orderInfo._royalty};
 
                 let orderEventDetail = {orderId: orderInfo._orderId, event: event.event, blockNumber: event.blockNumber,
                     tHash: event.transactionHash, tIndex: event.transactionIndex, blockHash: event.blockHash,
                     logIndex: event.logIndex, removed: event.removed, id: event.id}
 
-                pasarDbService.insertOrderEvent(orderEventDetail);
-                pasarDbService.updateOrder(pasarOrder);
+                pasarDBService.insertOrderEvent(orderEventDetail);
+                pasarDBService.updateOrder(pasarOrder);
             })
         });
 
         let orderCanceledJobId = schedule.scheduleJob(new Date(now + 2 * 60 * 1000), async () => {
             logger.info("[OrderCanceled] Sync Starting ...")
-            let lastHeight = await pasarDbService.getLastPasarOrderSyncHeight('OrderCanceled');
+            let lastHeight = await pasarDBService.getLastPasarOrderSyncHeight('OrderCanceled');
             pasarContract.events.OrderCanceled({
                 fromBlock: lastHeight + 1
             }).on("error", function (error) {
-                logger.info("[OrderCanceled] Sync Ending ...")
+                logger.info(error);
+                logger.info("[OrderCanceled] Sync Ending ...");
             }).on("data", function (event) {
                 let orderInfo = event.returnValues;
-                let pasarOrder = {orderId: orderInfo._orderId, event: event.event, seller: orderInfo._seller}
+                let pasarOrder = {orderId: orderInfo._orderId, event: event.event, seller: orderInfo._seller};
 
                 let orderEventDetail = {orderId: orderInfo._orderId, event: event.event, blockNumber: event.blockNumber,
                     tHash: event.transactionHash, tIndex: event.transactionIndex, blockHash: event.blockHash,
-                    logIndex: event.logIndex, removed: event.removed, id: event.id}
+                    logIndex: event.logIndex, removed: event.removed, id: event.id};
 
-                pasarDbService.insertOrderEvent(orderEventDetail);
-                pasarDbService.updateOrder(pasarOrder);
+                pasarDBService.insertOrderEvent(orderEventDetail);
+                pasarDBService.updateOrder(pasarOrder);
             })
         });
 
         let orderPriceChangedJobId = schedule.scheduleJob(new Date(now + 3 * 60 * 1000), async () => {
             logger.info("[OrderPriceChanged] Sync Starting ...")
-            let lastHeight = await pasarDbService.getLastPasarOrderSyncHeight('OrderPriceChanged');
-            pasarContract.events.OrderPriceChanged({fromBlock: lastHeight + 1}, function (error, event) {
-                if(error) {
-                    logger.info("[OrderPriceChanged] Sync Ending ...")
-                } else {
-                    let orderInfo = event.returnValues;
-                    let pasarOrder = {orderId: orderInfo[1], price: orderInfo[3]}
-
-                    let orderEventDetail = {orderId: orderInfo[1], event: event.event, blockNumber: event.blockNumber,
-                        tHash: event.transactionHash, tIndex: event.transactionIndex, blockHash: event.blockHash,
-                        logIndex: event.logIndex, removed: event.removed, id: event.id}
-
-                    pasarDbService.insertOrderEvent(orderEventDetail);
-                    pasarDbService.updateOrder(pasarOrder);
-                }
+            let lastHeight = await pasarDBService.getLastPasarOrderSyncHeight('OrderPriceChanged');
+            pasarContract.events.OrderPriceChanged({
+                fromBlock: lastHeight + 1
             }).on("error", function (error) {
-
+                logger.info(error);
+                logger.info("[OrderPriceChanged] Sync Ending ...");
             }).on("data", function (event) {
+                let orderInfo = event.returnValues;
+                let pasarOrder = {orderId: orderInfo[1], price: orderInfo[3]}
 
+                let orderEventDetail = {orderId: orderInfo[1], event: event.event, blockNumber: event.blockNumber,
+                    tHash: event.transactionHash, tIndex: event.transactionIndex, blockHash: event.blockHash,
+                    logIndex: event.logIndex, removed: event.removed, id: event.id}
+
+                pasarDBService.insertOrderEvent(orderEventDetail);
+                pasarDBService.updateOrder(pasarOrder);
             })
         });
 
         schedule.scheduleJob({start: new Date(now + 60 * 1000), rule: '0 */2 * * * *'}, async () => {
-            let tokenIndex = await pasarDbService.getSynchronizedTokenIndex();
+            let tokenIndex = await pasarDBService.getSynchronizedTokenIndex();
 
             logger.info(`[TokenInfo] Sync Starting ... from index ${tokenIndex + 1}`)
 
@@ -141,7 +140,7 @@ module.exports = {
                     token.description = data.description;
                     token.thumbnail = data.thumbnail;
 
-                    await pasarDbService.replaceToken(token);
+                    await pasarDBService.replaceToken(token);
                 } catch (e) {
                     break;
                 }
