@@ -116,4 +116,15 @@ router.get('/listPasarOrder', function(req, res) {
     })
 });
 
+router.get('/whitelist', function(req, res) {
+    let address = req.query.address;
+
+    pasarDBService.getWhitelist(address).then(result => {
+        res.json(result);
+    }).catch(error => {
+        console.log(error);
+        res.json({code: 500, message: 'server error'});
+    })
+})
+
 module.exports = router;

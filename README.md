@@ -39,7 +39,7 @@ pm2 start bin/www
 
 ## API
 
-调用URL: https://example.com/feeds/api/v1
+调用URL: `https://example.com/feeds/api/v1`
 
 1. 注册
 
@@ -214,7 +214,7 @@ response:     {"code": 200, "message": "success", data: {...}}  数据存在
 
 包含V2接口的 `get` `listAll` 和 `listPage`，但是去掉了返回值中的 `feedsAvatar` 和 `_id`
 
-调用URL: https://www.trinity-tech.io/feeds/api/v3
+调用URL: `https://www.trinity-tech.io/feeds/api/v3`
 
 1. 根据 `feedsUrlHash` 获取 `feedsAvatar`
 
@@ -244,7 +244,7 @@ response:     {"code": 200, "message": "success", data: {...}}  数据存在
 
 ## NFT Token API
 
-调用URL: https://example.com/pasar/api/v1
+调用URL: `https://example.com/pasar/api/v1`
 
 1. 注册
 
@@ -268,7 +268,7 @@ response:     {"code": 200, "message": "success"}  成功
               {"code": 500, "message": <descripton>}  服务器错误  
 ```
 
-2. 根据tokenId获取
+2. 根据 `tokenId` 获取
 
 ```
 url:          /get  
@@ -306,7 +306,7 @@ response:     {"code": 200, "message": "success", data: {total: 100, result: [{}
               {"code": 500, "message": <descripton>}  服务器错误
 ```
 
-5. (分页)获取NFT Order
+5. (分页)获取 `NFT Order`
 
 ```
 url:          /listPasarOrder
@@ -319,11 +319,23 @@ response:     {"code": 200, "message": "success", data: {total: 100, result: [{}
               {"code": 500, "message": <descripton>}  服务器错误
 ```
 
+6. 获取 `Whitelist`
+
+```
+url:          /whitelist
+method:       GET
+parameter:    address (地址 选填 未传地址返回全部 whitelist)
+              
+response:     {"code": 200, "message": "success", data: [{}, ...]}  成功
+              {"code": 400, "message": <descripton>}  参数错误
+              {"code": 500, "message": <descripton>}  服务器错误
+```
+
 ## Sticker Api
 
-调用URL: https://example.com/sticker/api/v1
+调用URL: `https://example.com/sticker/api/v1`
 
-1. (分页)获取 stickers
+1. (分页)获取 `stickers`
 
 ```
 url:          /listStickers
@@ -336,14 +348,14 @@ response:     {"code": 200, "message": "success", data: {total: 100, result: [{}
               {"code": 500, "message": <descripton>}  服务器错误
 ```
 
-2. 搜索 stickers
+2. 搜索 `stickers`
 
 ```
 url:          /search
 method:       GET
 parameter:    key (搜索关键字 必填 可以根据 tokenId royaltyOwner 字段进行精确匹配，或者根据 name description 进行模糊搜索)
               
-response:     {"code": 200, "message": "success", data: {total: 100, result: [{}, ...]}}  成功
+response:     {"code": 200, "message": "success", data: [{}, ...]  成功
               {"code": 400, "message": <descripton>}  参数错误
               {"code": 500, "message": <descripton>}  服务器错误
 ```

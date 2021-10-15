@@ -126,4 +126,18 @@ module.exports = {
             await mongoClient.close();
         }
     },
+
+    getWhitelist: async function(address) {
+        let mongoClient = new MongoClient(config.mongodb, {useNewUrlParser: true, useUnifiedTopology: true});
+        try {
+            await mongoClient.connect();
+            const collection = mongoClient.db(config.dbName).collection('pasar_whitelist');
+            return await collection.find(address ? {address}: {}).project({"_id": 0}).toArray();
+        } catch (err) {
+            logger.error(err);
+            throw new Error();
+        } finally {
+            await mongoClient.close();
+        }
+    }
 }
