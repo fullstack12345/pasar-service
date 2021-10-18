@@ -24,7 +24,10 @@ module.exports = {
         let web3Sticker = new Web3(config.escRpcUrl);
         let stickerContract = new web3Sticker.eth.Contract(stickerContractABI, config.stickerContract);
 
+        let stickerContractWs = new web3.eth.Contract(stickerContractABI, config.stickerContract);
+
         let isGetForSaleOrderJobRun = false;
+        let isGetTokenInfoJobRun = false;
         let now = Date.now();
 
         let orderForSaleJobId = schedule.scheduleJob(new Date(now + 60 * 1000), async () => {
@@ -117,43 +120,64 @@ module.exports = {
             })
         });
 
-        schedule.scheduleJob({start: new Date(now + 60 * 1000), rule: '0 */2 * * * *'}, async () => {
-            let tokenIndex = await pasarDBService.getSynchronizedTokenIndex();
+        let tokenInfoSyncJobId = schedule.scheduleJob(new Date(now + 60 * 1000), async () => {
+            let lastHeight = await pasarDBService.getLastStickerSyncHeight();
+            isGetTokenInfoJobRun = true;
+            logger.info(`[TokenInfo] Sync Starting ... from block ${lastHeight + 1}`)
 
-            logger.info(`[TokenInfo] Sync Starting ... from index ${tokenIndex + 1}`)
-
-            for(let i = tokenIndex + 1; i < tokenIndex + 10; i++) {
-                try {
-                    let tokenId = await stickerContract.methods.tokenIdByIndex(i).call();
-                    let result = await stickerContract.methods.tokenInfo(tokenId).call();
-                    let token = {tokenIndex: i, tokenId, quantity: result.tokenSupply, royalties:result.royaltyFee,
-                        royaltyOwner: result.royaltyOwner, createTime: result.createTime, updateTime: result.updateTime}
-
-                    let tokenCID = result.tokenUri.split(":")[2];
-
-                    let response = await fetch(config.ipfsNodeUrl + tokenCID);
-                    let data = await response.json();
-                    token.kind = data.kind;
-                    token.type = data.type;
-                    token.asset = data.image;
-                    token.name = data.name;
-                    token.description = data.description;
-                    token.thumbnail = data.thumbnail;
-
-                    await pasarDBService.replaceToken(token);
-                } catch (e) {
-                    break;
+            stickerContractWs.events.TransferSingle({
+                fromBlock: lastHeight + 1
+            }).on("error", function (error) {
+                logger.info(error);
+                logger.info("[TokenInfo] Sync Ending ...");
+                isGetTokenInfoJobRun = false
+            }).on("data", async function (event) {
+                let from = event.returnValues._from;
+                let to = event.returnValues._to;
+                let tokenId = event.returnValues._id;
+                if(to === "0x0000000000000000000000000000000000000000") {
+                    await pasarDBService.burnToken(tokenId);
                 }
-            }
+
+                if(from === "0x0000000000000000000000000000000000000000") {
+                    try {
+                        let result = await stickerContract.methods.tokenInfo(tokenId).call();
+                        let token = {blockNumber: event.blockNumber, tokenIndex: result.tokenIndex, tokenId, quantity: result.tokenSupply,
+                            royalties:result.royaltyFee, royaltyOwner: result.royaltyOwner, createTime: result.createTime,
+                            updateTime: result.updateTime}
+
+                        let tokenCID = result.tokenUri.split(":")[2];
+
+                        let response = await fetch(config.ipfsNodeUrl + tokenCID);
+                        let data = await response.json();
+                        token.kind = data.kind;
+                        token.type = data.type;
+                        token.asset = data.image;
+                        token.name = data.name;
+                        token.description = data.description;
+                        token.thumbnail = data.thumbnail;
+
+                        await pasarDBService.replaceToken(token);
+                    } catch (e) {
+                        logger.info(`[TokenInfo] Sync error at ${event.blockNumber} ${tokenId}`);
+                        logger.info(e);
+                    }
+                }
+            })
         });
 
         schedule.scheduleJob({start: new Date(now + 61 * 1000), rule: '0 */2 * * * *'}, () => {
+            let now = Date.now();
+
             if(!isGetForSaleOrderJobRun) {
-                let now = Date.now();
                 orderForSaleJobId.reschedule(new Date(now + 60 * 1000));
                 orderFilledJobId.reschedule(new Date(now + 2 * 60 * 1000));
                 orderCanceledJobId.reschedule(new Date(now + 2 * 60 * 1000));
                 orderPriceChangedJobId.reschedule(new Date(now + 3 * 60 * 1000));
+            }
+
+            if(!isGetTokenInfoJobRun) {
+                tokenInfoSyncJobId.reschedule(new Date(now + 60 * 1000))
             }
         });
     }

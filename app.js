@@ -38,4 +38,6 @@ log4js.configure({
 });
 global.logger = log4js.getLogger('pasar');
 
+logger.info("========= Pasar Assist Service start =============")
+
 module.exports = app;

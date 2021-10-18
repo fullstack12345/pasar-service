@@ -12,7 +12,7 @@ module.exports = {
                 return doc.blockNumber
             } else {
                 //Pasar contract deploy at 7801378
-                return 7801377;
+                return config.pasarContractDeploy - 1;
             }
         } catch (err) {
             logger.error(err);
@@ -22,16 +22,16 @@ module.exports = {
         }
     },
 
-    getSynchronizedTokenIndex: async function () {
+    getLastStickerSyncHeight: async function () {
         let mongoClient = new MongoClient(config.mongodb, {useNewUrlParser: true, useUnifiedTopology: true});
         try {
             await mongoClient.connect();
             const collection = mongoClient.db(config.dbName).collection('pasar_token');
-            let doc = await collection.findOne({}, {sort:{tokenIndex: -1}});
+            let doc = await collection.findOne({}, {sort:{blockNumber: -1}});
             if(doc) {
                 return doc.tokenIndex
             } else {
-                return -1;
+                return config.stickerContractDeploy - 1;
             }
         } catch (err) {
             logger.error(err);
@@ -75,6 +75,20 @@ module.exports = {
             await mongoClient.connect();
             const collection = mongoClient.db(config.dbName).collection('pasar_token');
             await collection.replaceOne({tokenId: token.tokenId}, token, {upsert: true});
+        } catch (err) {
+            logger.error(err);
+            throw new Error();
+        } finally {
+            await mongoClient.close();
+        }
+    },
+
+    burnToken: async function (tokenId) {
+        let mongoClient = new MongoClient(config.mongodb, {useNewUrlParser: true, useUnifiedTopology: true});
+        try {
+            await mongoClient.connect();
+            const collection = mongoClient.db(config.dbName).collection('pasar_token');
+            await collection.updateOne({tokenId}, {$set: {royaltyOwner: '0x0000000000000000000000000000000000000000'}});
         } catch (err) {
             logger.error(err);
             throw new Error();
@@ -132,7 +146,8 @@ module.exports = {
         try {
             await mongoClient.connect();
             const collection = mongoClient.db(config.dbName).collection('pasar_whitelist');
-            return await collection.find(address ? {address}: {}).project({"_id": 0}).toArray();
+            let result =  await collection.find(address ? {address}: {}).project({"_id": 0}).toArray();
+            return {code: 200, message: 'success', data: result};
         } catch (err) {
             logger.error(err);
             throw new Error();
