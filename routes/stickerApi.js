@@ -1,6 +1,7 @@
 let express = require('express');
 let router = express.Router();
 let stickerDBService = require('../service/stickerDBService');
+const BigNumber = require('bignumber.js');
 
 router.get('/listStickers', function(req, res) {
     let pageNumStr = req.query.pageNum;
@@ -36,6 +37,10 @@ router.get('/search', function(req, res) {
     if(!keyword) {
         res.json({code: 400, message: 'bad request'})
         return;
+    }
+
+    if(keyword.startsWith('0x') && keyword.length > 42) {
+        keyword = new BigNumber(keyword).toFormat({prefix:""});
     }
 
     stickerDBService.query(keyword).then(result => {

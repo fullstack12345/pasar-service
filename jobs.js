@@ -7,6 +7,7 @@ let stickerContractABI = require('./stickerABI');
 
 module.exports = {
     run: function() {
+        logger.info("========= Pasar Assist Service start =============")
 
         const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
 
@@ -135,6 +136,9 @@ module.exports = {
                 let from = event.returnValues._from;
                 let to = event.returnValues._to;
                 let tokenId = event.returnValues._id;
+
+                logger.info(`[TokenInfo] Sync processing ... ${event.blockNumber} ${tokenId}`)
+
                 if(to === "0x0000000000000000000000000000000000000000") {
                     await pasarDBService.burnToken(tokenId);
                 }

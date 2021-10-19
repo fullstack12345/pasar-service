@@ -28,8 +28,6 @@ app.use('/feeds/api/v3', indexRouterV3);
 app.use('/pasar/api/v1', pasarApi);
 app.use('/sticker/api/v1', stickerApi);
 
-jobs.run()
-
 log4js.configure({
     appenders: { pasar: { type: 'dateFile', filename: 'logs/pasar.log', pattern: ".yyyy-MM-dd.log", compress: true, }},
     categories: { default: { appenders: ['pasar'], level: 'info'}},
@@ -38,6 +36,6 @@ log4js.configure({
 });
 global.logger = log4js.getLogger('pasar');
 
-logger.info("========= Pasar Assist Service start =============")
+jobs.run()
 
 module.exports = app;

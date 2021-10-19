@@ -29,7 +29,7 @@ module.exports = {
             const collection = mongoClient.db(config.dbName).collection('pasar_token');
             let doc = await collection.findOne({}, {sort:{blockNumber: -1}});
             if(doc) {
-                return doc.tokenIndex
+                return doc.blockNumber
             } else {
                 return config.stickerContractDeploy - 1;
             }
