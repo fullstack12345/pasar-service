@@ -242,7 +242,7 @@ response:     {"code": 200, "message": "success", data: {...}}  数据存在
               {"code": 500, "message": <descripton>}  服务器错误
 ```
 
-## NFT Token API
+## Pasar API
 
 调用URL: `https://example.com/pasar/api/v1`
 
@@ -313,6 +313,9 @@ url:          /listPasarOrder
 method:       GET
 parameter:    pageNum (页码 从1开始 选填 默认1)
               pageSize (每页条目 大于0 选填 默认10)
+              blockNumber (返回本高度之后的数据 选填)
+              event (订单类型： OrderForSale, OrderCanceled, OrderFilled)
+              sort (排序方式: 默认按BlockNumber降序， 传 asc表示按BlockNumber升序)
               
 response:     {"code": 200, "message": "success", data: {total: 100, result: [{}, ...]}}  成功
               {"code": 400, "message": <descripton>}  参数错误
@@ -354,6 +357,19 @@ response:     {"code": 200, "message": "success", data: {total: 100, result: [{}
 url:          /search
 method:       GET
 parameter:    key (搜索关键字 必填 可以根据 tokenId royaltyOwner 字段进行精确匹配，或者根据 name description 进行模糊搜索)
+              
+response:     {"code": 200, "message": "success", data: [{}, ...]  成功
+              {"code": 400, "message": <descripton>}  参数错误
+              {"code": 500, "message": <descripton>}  服务器错误
+```
+
+3. 查询 `stickers`
+
+```
+url:          /query
+method:       GET
+parameter:    creator (token创建者 和owner参数必选其一)
+              owner (token拥有者 和creator参数必选其一)
               
 response:     {"code": 200, "message": "success", data: [{}, ...]  成功
               {"code": 400, "message": <descripton>}  参数错误

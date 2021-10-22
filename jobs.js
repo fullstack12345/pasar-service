@@ -33,9 +33,12 @@ module.exports = {
 
         let orderForSaleJobId = schedule.scheduleJob(new Date(now + 60 * 1000), async () => {
             logger.info("[OrderForSale] Sync Starting ...")
+
             isGetForSaleOrderJobRun = true;
             let lastHeight = await pasarDBService.getLastPasarOrderSyncHeight('OrderForSale');
+
             logger.info("[OrderForSale] Sync last height: " + lastHeight)
+
             pasarContract.events.OrderForSale({
                 fromBlock: lastHeight + 1
             }).on("error", function (error) {
@@ -45,7 +48,8 @@ module.exports = {
             }).on("data", function (event) {
                 let orderInfo = event.returnValues;
                 let pasarOrder = {orderId: orderInfo._orderId, event: event.event, seller: orderInfo._seller,
-                    tokenId: orderInfo._tokenId, amount: orderInfo._amount, price: orderInfo._price}
+                    tokenId: orderInfo._tokenId, amount: orderInfo._amount,
+                    price: orderInfo._price, blockNumber: event.blockNumber,}
 
                 let orderEventDetail = {orderId: orderInfo._orderId, event: event.event, blockNumber: event.blockNumber,
                     tHash: event.transactionHash, tIndex: event.transactionIndex, blockHash: event.blockHash,
@@ -68,7 +72,7 @@ module.exports = {
                 let orderInfo = event.returnValues;
                 let pasarOrder = {orderId: orderInfo._orderId, event: event.event, seller: orderInfo._seller,
                     buyer: orderInfo._buyer, copyrightOwner: orderInfo._copyrightOwner, price: orderInfo._price,
-                    royalty: orderInfo._royalty};
+                    royalty: orderInfo._royalty, blockNumber: event.blockNumber,};
 
                 let orderEventDetail = {orderId: orderInfo._orderId, event: event.event, blockNumber: event.blockNumber,
                     tHash: event.transactionHash, tIndex: event.transactionIndex, blockHash: event.blockHash,
@@ -89,7 +93,8 @@ module.exports = {
                 logger.info("[OrderCanceled] Sync Ending ...");
             }).on("data", function (event) {
                 let orderInfo = event.returnValues;
-                let pasarOrder = {orderId: orderInfo._orderId, event: event.event, seller: orderInfo._seller};
+                let pasarOrder = {orderId: orderInfo._orderId, event: event.event,
+                    seller: orderInfo._seller, blockNumber: event.blockNumber,};
 
                 let orderEventDetail = {orderId: orderInfo._orderId, event: event.event, blockNumber: event.blockNumber,
                     tHash: event.transactionHash, tIndex: event.transactionIndex, blockHash: event.blockHash,
@@ -122,6 +127,7 @@ module.exports = {
         });
 
         let tokenInfoSyncJobId = schedule.scheduleJob(new Date(now + 60 * 1000), async () => {
+            const burnAddress = '0x0000000000000000000000000000000000000000';
             let lastHeight = await pasarDBService.getLastStickerSyncHeight();
             isGetTokenInfoJobRun = true;
             logger.info(`[TokenInfo] Sync Starting ... from block ${lastHeight + 1}`)
@@ -139,16 +145,17 @@ module.exports = {
 
                 logger.info(`[TokenInfo] Sync processing ... ${event.blockNumber} ${tokenId}`)
 
-                if(to === "0x0000000000000000000000000000000000000000") {
+                if(to === burnAddress) {
                     await pasarDBService.burnToken(tokenId);
+                    return;
                 }
 
-                if(from === "0x0000000000000000000000000000000000000000") {
+                if(from === burnAddress) {
                     try {
                         let result = await stickerContract.methods.tokenInfo(tokenId).call();
-                        let token = {blockNumber: event.blockNumber, tokenIndex: result.tokenIndex, tokenId, quantity: result.tokenSupply,
-                            royalties:result.royaltyFee, royaltyOwner: result.royaltyOwner, createTime: result.createTime,
-                            updateTime: result.updateTime}
+                        let token = {blockNumber: event.blockNumber, tokenIndex: result.tokenIndex, tokenId,
+                            quantity: result.tokenSupply, royalties:result.royaltyFee, royaltyOwner: result.royaltyOwner,
+                            holder: result.royaltyOwner, createTime: result.createTime, updateTime: result.updateTime}
 
                         let tokenCID = result.tokenUri.split(":")[2];
 
@@ -166,7 +173,10 @@ module.exports = {
                         logger.info(`[TokenInfo] Sync error at ${event.blockNumber} ${tokenId}`);
                         logger.info(e);
                     }
+                    return;
                 }
+
+                await pasarDBService.updateToken(tokenId, to);
             })
         });
 

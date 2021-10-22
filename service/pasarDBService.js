@@ -1,4 +1,5 @@
 let config = require('../config');
+const e = require("express");
 let MongoClient = require('mongodb').MongoClient;
 
 module.exports = {
@@ -97,6 +98,20 @@ module.exports = {
         }
     },
 
+    updateToken: async function (tokenId, holder) {
+        let mongoClient = new MongoClient(config.mongodb, {useNewUrlParser: true, useUnifiedTopology: true});
+        try {
+            await mongoClient.connect();
+            const collection = mongoClient.db(config.dbName).collection('pasar_token');
+            await collection.updateOne({tokenId}, {$set: {holder}});
+        } catch (err) {
+            logger.error(err);
+            throw new Error();
+        } finally {
+            await mongoClient.close();
+        }
+    },
+
     updateOrder: async function (pasarOrder) {
         let mongoClient = new MongoClient(config.mongodb, {useNewUrlParser: true, useUnifiedTopology: true});
         let {orderId, ...rest} = pasarOrder
@@ -112,24 +127,35 @@ module.exports = {
         }
     },
 
-    listPasarOrder: async function(pageNum=1, pageSize=10) {
+    listPasarOrder: async function(pageNum=1, pageSize=10, blockNumber, event, sort) {
         let mongoClient = new MongoClient(config.mongodb, {useNewUrlParser: true, useUnifiedTopology: true});
         try {
             await mongoClient.connect();
             const collection = mongoClient.db(config.dbName).collection('pasar_order');
-            let total = await collection.find({"event": "OrderForSale"}).count();
+
+            let match = {}
 
             let pipeline = [
-                { $match:{"event": "OrderForSale"}},
+                { $match: match},
                 { $lookup: {from: "pasar_token", localField: "tokenId", foreignField: "tokenId", as: "token"} },
                 { $unwind: "$token"},
-                { $project: {"_id":0,orderId:1, tokenId:1, seller:1, price: 1, asset: "$token.asset", name: "$token.name", description: "$token.description",
-                        kind: "$token.kind", type: "$token.type", royalties: "$token.royalties", quantity: "$token.quantity", thumbnail: "$token.thumbnail",
-                        createTime: "$token.createTime", updateTime: "$token.updateTime"}},
-                { $sort: {updateTime: -1}},
+                { $project: {"_id":0,orderId:1, tokenId:1, seller:1, price: 1,blockNumber: 1,event: 1,
+                        asset: "$token.asset", name: "$token.name", description: "$token.description",
+                        kind: "$token.kind", type: "$token.type", royalties: "$token.royalties", quantity: "$token.quantity",
+                        thumbnail: "$token.thumbnail", createTime: "$token.createTime", updateTime: "$token.updateTime"}},
+                { $sort: {blockNumber: sort}},
                 { $skip: (pageNum - 1) * pageSize },
                 { $limit: pageSize }
             ];
+
+            if(event) {
+                match["event"] = event;
+            }
+            if(blockNumber !== undefined) {
+                match["blockNumber"] = {"$gte": blockNumber };
+            }
+
+            let total = await collection.find(match).count();
 
             let result = await collection.aggregate(pipeline).toArray();
             return {code: 200, message: 'success', data: {total, result}};

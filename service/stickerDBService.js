@@ -18,12 +18,36 @@ module.exports = {
         }
     },
 
-    query: async function(keyword) {
+    search: async function(keyword) {
         let client = new MongoClient(config.mongodb, {useNewUrlParser: true, useUnifiedTopology: true});
         try {
             await client.connect();
             const collection = client.db(config.dbName).collection('pasar_token');
             let result = await collection.find({$or: [{tokenId: keyword}, {royaltyOwner: keyword}, {name: {$regex: keyword}}, {description: {$regex: keyword}}]}).project({"_id": 0}).toArray();
+            return {code: 200, message: 'success', data: {result}};
+        } catch (err) {
+            logger.error(err);
+            return {code: 500, message: 'server error'};
+        } finally {
+            await client.close();
+        }
+    },
+
+    query: async function(owner, creator) {
+        let client = new MongoClient(config.mongodb, {useNewUrlParser: true, useUnifiedTopology: true});
+        try {
+            await client.connect();
+            const collection = client.db(config.dbName).collection('pasar_token');
+
+            let condition = {};
+            if(owner) {
+                condition["royaltyOwner"] = creator;
+            }
+            if(creator) {
+                condition["holder"] = owner;
+            }
+
+            let result = await collection.find(condition).project({"_id": 0}).toArray();
             return {code: 200, message: 'success', data: {result}};
         } catch (err) {
             logger.error(err);

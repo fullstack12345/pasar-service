@@ -43,7 +43,24 @@ router.get('/search', function(req, res) {
         keyword = new BigNumber(keyword).toFormat({prefix:""});
     }
 
-    stickerDBService.query(keyword).then(result => {
+    stickerDBService.search(keyword).then(result => {
+        res.json(result);
+    }).catch(error => {
+        console.log(error);
+        res.json({code: 500, message: 'server error'});
+    })
+});
+
+router.get('/query', function(req, res) {
+    let owner = req.query.owner;
+    let creator = req.query.creator;
+
+    if(!owner || !creator) {
+        res.json({code: 400, message: 'bad request'})
+        return;
+    }
+
+    stickerDBService.query(owner, creator).then(result => {
         res.json(result);
     }).catch(error => {
         console.log(error);
