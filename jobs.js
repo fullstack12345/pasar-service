@@ -120,7 +120,7 @@ module.exports = {
                 logger.info("[OrderPriceChanged] Sync Ending ...");
             }).on("data", function (event) {
                 let orderInfo = event.returnValues;
-                let orderEventDetail = {orderId: orderInfo[1], event: event.event, blockNumber: event.blockNumber,
+                let orderEventDetail = {orderId: orderInfo._orderId, event: event.event, blockNumber: event.blockNumber,
                     tHash: event.transactionHash, tIndex: event.transactionIndex, blockHash: event.blockHash,
                     logIndex: event.logIndex, removed: event.removed, id: event.id}
 
