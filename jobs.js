@@ -49,7 +49,7 @@ module.exports = {
                 let orderInfo = event.returnValues;
                 let pasarOrder = {orderId: orderInfo._orderId, event: event.event, seller: orderInfo._seller,
                     tokenId: orderInfo._tokenId, amount: orderInfo._amount,
-                    price: orderInfo._price, blockNumber: event.blockNumber,}
+                    price: orderInfo._price, blockNumber: event.blockNumber}
 
                 let orderEventDetail = {orderId: orderInfo._orderId, event: event.event, blockNumber: event.blockNumber,
                     tHash: event.transactionHash, tIndex: event.transactionIndex, blockHash: event.blockHash,
@@ -72,7 +72,7 @@ module.exports = {
                 let orderInfo = event.returnValues;
                 let pasarOrder = {orderId: orderInfo._orderId, event: event.event, seller: orderInfo._seller,
                     buyer: orderInfo._buyer, copyrightOwner: orderInfo._copyrightOwner, price: orderInfo._price,
-                    royalty: orderInfo._royalty, blockNumber: event.blockNumber,};
+                    royalty: orderInfo._royalty, blockNumber: event.blockNumber};
 
                 let orderEventDetail = {orderId: orderInfo._orderId, event: event.event, blockNumber: event.blockNumber,
                     tHash: event.transactionHash, tIndex: event.transactionIndex, blockHash: event.blockHash,

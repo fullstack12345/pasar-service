@@ -55,7 +55,7 @@ router.get('/query', function(req, res) {
     let owner = req.query.owner;
     let creator = req.query.creator;
 
-    if(!owner || !creator) {
+    if(!owner && !creator) {
         res.json({code: 400, message: 'bad request'})
         return;
     }
