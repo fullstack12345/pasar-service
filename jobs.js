@@ -19,17 +19,33 @@ module.exports = {
                 onTimeout: false,
             },
         })
-        let web3 = new Web3(web3WsProvider);
-        let pasarContract = new web3.eth.Contract(pasarContractABI, config.pasarContract);
+        let web3Ws = new Web3(web3WsProvider);
+        let pasarContractWs = new web3Ws.eth.Contract(pasarContractABI, config.pasarContract);
+        let stickerContractWs = new web3Ws.eth.Contract(stickerContractABI, config.stickerContract);
 
-        let web3Sticker = new Web3(config.escRpcUrl);
-        let stickerContract = new web3Sticker.eth.Contract(stickerContractABI, config.stickerContract);
 
-        let stickerContractWs = new web3.eth.Contract(stickerContractABI, config.stickerContract);
+        let web3Rpc = new Web3(config.escRpcUrl);
+        let pasarContract = new web3Rpc.eth.Contract(pasarContractABI, config.pasarContract);
+        let stickerContract = new web3Rpc.eth.Contract(stickerContractABI, config.stickerContract);
 
         let isGetForSaleOrderJobRun = false;
         let isGetTokenInfoJobRun = false;
         let now = Date.now();
+
+        let updateOrder = function (orderId, blockNumber) {
+            pasarContract.methods.getOrderById(orderId).call().then(result => {
+                let pasarOrder = {orderId: result.orderId, orderType: result.orderType, orderState: result.orderState,
+                    tokenId: result.tokenId, amount: result.amount, price: result.price, endTime: result.endTime,
+                    sellerAddr: result.sellerAddr, buyerAddr: result.buyerAddr, bids: result.bids, lastBidder: result.lastBidder,
+                    lastBid: result.lastBid, filled: result.filled, royaltyOwner: result.royaltyOwner, royaltyFee: result.royaltyFee,
+                    createTime: result.createTime, updateTime: result.updateTime, blockNumber}
+
+                pasarDBService.updateOrInsert(pasarOrder);
+            }).catch(error => {
+                logger.info(error);
+                logger.info(`[OrderForSale] Sync - getOrderById(${orderInfo._orderId}) call error`);
+            })
+        }
 
         let orderForSaleJobId = schedule.scheduleJob(new Date(now + 60 * 1000), async () => {
             logger.info("[OrderForSale] Sync Starting ...")
@@ -39,7 +55,7 @@ module.exports = {
 
             logger.info("[OrderForSale] Sync last height: " + lastHeight)
 
-            pasarContract.events.OrderForSale({
+            pasarContractWs.events.OrderForSale({
                 fromBlock: lastHeight + 1
             }).on("error", function (error) {
                 logger.info(error);
@@ -47,82 +63,69 @@ module.exports = {
                 isGetForSaleOrderJobRun = false
             }).on("data", function (event) {
                 let orderInfo = event.returnValues;
-                let pasarOrder = {orderId: orderInfo._orderId, event: event.event, seller: orderInfo._seller,
-                    tokenId: orderInfo._tokenId, amount: orderInfo._amount,
-                    price: orderInfo._price, blockNumber: event.blockNumber}
-
                 let orderEventDetail = {orderId: orderInfo._orderId, event: event.event, blockNumber: event.blockNumber,
                     tHash: event.transactionHash, tIndex: event.transactionIndex, blockHash: event.blockHash,
                     logIndex: event.logIndex, removed: event.removed, id: event.id}
 
                 pasarDBService.insertOrderEvent(orderEventDetail);
-                pasarDBService.insertOrder(pasarOrder);
+                updateOrder(orderInfo._orderId, event.blockNumber);
             })
         });
 
         let orderFilledJobId = schedule.scheduleJob(new Date(now + 2 * 60 * 1000), async () => {
             logger.info("[OrderFilled] Sync Starting ...")
             let lastHeight = await pasarDBService.getLastPasarOrderSyncHeight('OrderFilled');
-            pasarContract.events.OrderFilled({
+            pasarContractWs.events.OrderFilled({
                 fromBlock: lastHeight + 1
             }).on("error", function (error) {
                 logger.info(error);
                 logger.info("[OrderFilled] Sync Ending ...");
             }).on("data", function (event) {
                 let orderInfo = event.returnValues;
-                let pasarOrder = {orderId: orderInfo._orderId, event: event.event, seller: orderInfo._seller,
-                    buyer: orderInfo._buyer, copyrightOwner: orderInfo._copyrightOwner, price: orderInfo._price,
-                    royalty: orderInfo._royalty, blockNumber: event.blockNumber};
-
                 let orderEventDetail = {orderId: orderInfo._orderId, event: event.event, blockNumber: event.blockNumber,
                     tHash: event.transactionHash, tIndex: event.transactionIndex, blockHash: event.blockHash,
                     logIndex: event.logIndex, removed: event.removed, id: event.id}
 
                 pasarDBService.insertOrderEvent(orderEventDetail);
-                pasarDBService.updateOrder(pasarOrder);
+                updateOrder(orderInfo._orderId, event.blockNumber);
             })
         });
 
         let orderCanceledJobId = schedule.scheduleJob(new Date(now + 2 * 60 * 1000), async () => {
             logger.info("[OrderCanceled] Sync Starting ...")
             let lastHeight = await pasarDBService.getLastPasarOrderSyncHeight('OrderCanceled');
-            pasarContract.events.OrderCanceled({
+            pasarContractWs.events.OrderCanceled({
                 fromBlock: lastHeight + 1
             }).on("error", function (error) {
                 logger.info(error);
                 logger.info("[OrderCanceled] Sync Ending ...");
             }).on("data", function (event) {
                 let orderInfo = event.returnValues;
-                let pasarOrder = {orderId: orderInfo._orderId, event: event.event,
-                    seller: orderInfo._seller, blockNumber: event.blockNumber,};
-
                 let orderEventDetail = {orderId: orderInfo._orderId, event: event.event, blockNumber: event.blockNumber,
                     tHash: event.transactionHash, tIndex: event.transactionIndex, blockHash: event.blockHash,
                     logIndex: event.logIndex, removed: event.removed, id: event.id};
 
                 pasarDBService.insertOrderEvent(orderEventDetail);
-                pasarDBService.updateOrder(pasarOrder);
+                updateOrder(orderInfo._orderId, event.blockNumber);
             })
         });
 
         let orderPriceChangedJobId = schedule.scheduleJob(new Date(now + 3 * 60 * 1000), async () => {
             logger.info("[OrderPriceChanged] Sync Starting ...")
             let lastHeight = await pasarDBService.getLastPasarOrderSyncHeight('OrderPriceChanged');
-            pasarContract.events.OrderPriceChanged({
+            pasarContractWs.events.OrderPriceChanged({
                 fromBlock: lastHeight + 1
             }).on("error", function (error) {
                 logger.info(error);
                 logger.info("[OrderPriceChanged] Sync Ending ...");
             }).on("data", function (event) {
                 let orderInfo = event.returnValues;
-                let pasarOrder = {orderId: orderInfo[1], price: orderInfo[3]}
-
                 let orderEventDetail = {orderId: orderInfo[1], event: event.event, blockNumber: event.blockNumber,
                     tHash: event.transactionHash, tIndex: event.transactionIndex, blockHash: event.blockHash,
                     logIndex: event.logIndex, removed: event.removed, id: event.id}
 
                 pasarDBService.insertOrderEvent(orderEventDetail);
-                pasarDBService.updateOrder(pasarOrder);
+                updateOrder(orderInfo._orderId, event.blockNumber);
             })
         });
 

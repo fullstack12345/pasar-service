@@ -42,12 +42,13 @@ module.exports = {
         }
     },
 
-    insertOrder: async function (pasarOrder) {
+    updateOrInsert: async function (pasarOrder) {
+        let {orderId, ...rest} = pasarOrder;
         let mongoClient = new MongoClient(config.mongodb, {useNewUrlParser: true, useUnifiedTopology: true});
         try {
             await mongoClient.connect();
             const collection = mongoClient.db(config.dbName).collection('pasar_order');
-            await collection.insertOne(pasarOrder);
+            await collection.updateOne({orderId}, {$set: rest}, {upsert: true});
         } catch (err) {
             logger.error(err);
             throw new Error();
@@ -112,22 +113,7 @@ module.exports = {
         }
     },
 
-    updateOrder: async function (pasarOrder) {
-        let mongoClient = new MongoClient(config.mongodb, {useNewUrlParser: true, useUnifiedTopology: true});
-        let {orderId, ...rest} = pasarOrder
-        try {
-            await mongoClient.connect();
-            const collection = mongoClient.db(config.dbName).collection('pasar_order');
-            return await collection.updateOne({orderId, event: 'OrderForSale'}, { $set: rest});
-        } catch (err) {
-            logger.error(err);
-            throw new Error();
-        } finally {
-            await mongoClient.close();
-        }
-    },
-
-    listPasarOrder: async function(pageNum=1, pageSize=10, blockNumber, event, sort) {
+    listPasarOrder: async function(pageNum=1, pageSize=10, blockNumber, orderState, sort) {
         let mongoClient = new MongoClient(config.mongodb, {useNewUrlParser: true, useUnifiedTopology: true});
         try {
             await mongoClient.connect();
@@ -139,17 +125,19 @@ module.exports = {
                 { $match: match},
                 { $lookup: {from: "pasar_token", localField: "tokenId", foreignField: "tokenId", as: "token"} },
                 { $unwind: "$token"},
-                { $project: {"_id":0,orderId:1, tokenId:1, seller:1, price: 1,blockNumber: 1,event: 1,
-                        asset: "$token.asset", name: "$token.name", description: "$token.description", kind: "$token.kind",
-                        type: "$token.type", royalties: "$token.royalties",royaltyOwner: "$token.royaltyOwner", quantity: "$token.quantity",
+                { $project: {"_id": 0, orderId:1, orderType:1, orderState:1, tokenId: 1,blockNumber: 1, amount: 1,
+                        price: 1, endTime: 1, sellerAddr: 1, buyerAddr: 1, bids: 1, lastBidder: 1, filled:1, royaltyFee: 1,
+                        orderCreateTime: 1, orderUpdateTime: 1, asset: "$token.asset", name: "$token.name",
+                        description: "$token.description", kind: "$token.kind", type: "$token.type",
+                        royalties: "$token.royalties",royaltyOwner: "$token.royaltyOwner", quantity: "$token.quantity",
                         thumbnail: "$token.thumbnail", createTime: "$token.createTime", updateTime: "$token.updateTime"}},
                 { $sort: {blockNumber: sort}},
                 { $skip: (pageNum - 1) * pageSize },
                 { $limit: pageSize }
             ];
 
-            if(event) {
-                match["event"] = event;
+            if(orderState) {
+                match["orderState"] = orderState;
             }
             if(blockNumber !== undefined) {
                 match["blockNumber"] = {"$gte": blockNumber };

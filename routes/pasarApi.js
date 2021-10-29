@@ -86,7 +86,7 @@ router.get('/listPasarOrder', function(req, res) {
     let pageNumStr = req.query.pageNum;
     let pageSizeStr = req.query.pageSize;
     let blockNumberStr = req.query.blockNumber;
-    let event = req.query.event;
+    let orderState = req.query.orderState;
     let sort = req.query.sort === "asc" ? 1 : -1;
 
     let pageNum, pageSize, blockNumber;
@@ -115,7 +115,7 @@ router.get('/listPasarOrder', function(req, res) {
         return;
     }
 
-    pasarDBService.listPasarOrder(pageNum, pageSize, blockNumber, event, sort).then(result => {
+    pasarDBService.listPasarOrder(pageNum, pageSize, blockNumber, orderState, sort).then(result => {
         res.json(result);
     }).catch(error => {
         console.log(error);
