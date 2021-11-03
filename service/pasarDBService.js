@@ -164,9 +164,34 @@ module.exports = {
             return {code: 200, message: 'success', data: result};
         } catch (err) {
             logger.error(err);
-            throw new Error();
         } finally {
             await mongoClient.close();
         }
-    }
+    },
+
+    pasarOrderCount: async function() {
+        let mongoClient = new MongoClient(config.mongodb, {useNewUrlParser: true, useUnifiedTopology: true});
+        try {
+            await mongoClient.connect();
+            const collection = mongoClient.db(config.dbName).collection('pasar_order');
+            return await collection.find().count();
+        } catch (err) {
+            logger.error(err);
+        } finally {
+            await mongoClient.close();
+        }
+    },
+
+    stickerCount: async function() {
+        let mongoClient = new MongoClient(config.mongodb, {useNewUrlParser: true, useUnifiedTopology: true});
+        try {
+            await mongoClient.connect();
+            const collection = mongoClient.db(config.dbName).collection('pasar_token');
+            return await collection.find().count();
+        } catch (err) {
+            logger.error(err);
+        } finally {
+            await mongoClient.close();
+        }
+    },
 }

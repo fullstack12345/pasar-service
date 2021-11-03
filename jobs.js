@@ -4,6 +4,7 @@ let pasarDBService = require('./service/pasarDBService');
 let config = require('./config');
 let pasarContractABI = require('./pasarABI');
 let stickerContractABI = require('./stickerABI');
+let sendMail = require('./send_mail');
 
 module.exports = {
     run: function() {
@@ -31,6 +32,9 @@ module.exports = {
         let isGetForSaleOrderJobRun = false;
         let isGetTokenInfoJobRun = false;
         let now = Date.now();
+
+        let recipients = [];
+        recipients.push('lifayi2008@163.com');
 
         function updateOrder(orderId, blockNumber) {
             logger.info(`[GetOrderInfo] orderId: ${orderId}   blockNumber: ${blockNumber}`);
@@ -205,6 +209,28 @@ module.exports = {
 
             if(!isGetTokenInfoJobRun) {
                 tokenInfoSyncJobId.reschedule(new Date(now + 60 * 1000))
+            }
+        });
+
+        /**
+         *  Pasar order sync check
+         */
+        schedule.scheduleJob({start: new Date(now + 60 * 1000), rule: '0 */2 * * * *'}, async () => {
+            let orderCount = await pasarDBService.pasarOrderCount();
+            let orderCountContract = await pasarContract.methods.getOrderCount().call();
+            if(orderCountContract - orderCount > 2) {
+                sendMail("Pasar Order Sync", "pasar assist sync service sync failed", recipients.join());
+            }
+        });
+
+        /**
+         *  Sticker sync check
+         */
+        schedule.scheduleJob({start: new Date(now + 60 * 1000), rule: '0 */2 * * * *'}, async () => {
+            let stickerCount = await pasarDBService.stickerCount();
+            let stickerCountContract = await stickerContract.methods.totalSupply().call();
+            if(stickerCountContract - stickerCount > 2) {
+                sendMail("Sticker Sync", "pasar assist sync service sync failed", recipients.join());
             }
         });
     }
