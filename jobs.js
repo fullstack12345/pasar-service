@@ -193,6 +193,7 @@ module.exports = {
                     return;
                 }
 
+                //update token holder
                 await pasarDBService.updateToken(tokenId, to);
             })
         });
