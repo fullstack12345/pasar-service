@@ -41,10 +41,10 @@ module.exports = {
 
             let condition = {};
             if(owner) {
-                condition["royaltyOwner"] = owner;
+                condition["holder"] = owner;
             }
             if(creator) {
-                condition["holder"] = creator;
+                condition["royaltyOwner"] = creator;
             }
 
             let result = await collection.find(condition).project({"_id": 0}).toArray();
