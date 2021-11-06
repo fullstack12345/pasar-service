@@ -8,7 +8,7 @@ The assist service keep synchrozing all collectibles from Pasar contract on bock
 ```bash
 $ sudo apt-get update
 
-$ curl -sL https://deb.nodesource.com/setup_10.x | sudo -E bash -
+$ curl -fsSL https://deb.nodesource.com/setup_14.x | sudo -E bash -
 $ sudo apt-get install -y nodejs
 
 $ sudo apt-get install mongodb
@@ -32,7 +32,7 @@ $ mongo
 
 ```bash
 git clone https://github.com/elastos-trinity/pasar-assist-service.git
-cd feeds-sources-api
+cd pasar-assist-service
 npm install
 pm2 start bin/www
 ```
@@ -314,7 +314,7 @@ method:       GET
 parameter:    pageNum (页码 从1开始 选填 默认1)
               pageSize (每页条目 大于0 选填 默认10)
               blockNumber (返回本高度之后的数据 选填)
-              event (订单类型： OrderForSale, OrderCanceled, OrderFilled)
+              orderState (订单状态： 1(OrderForSale), 2(OrderCanceled), 3(OrderFilled))
               sort (排序方式: 默认按BlockNumber降序， 传 asc表示按BlockNumber升序)
               
 response:     {"code": 200, "message": "success", data: {total: 100, result: [{}, ...]}}  成功
@@ -368,8 +368,8 @@ response:     {"code": 200, "message": "success", data: [{}, ...]  成功
 ```
 url:          /query
 method:       GET
-parameter:    creator (token创建者 和owner参数必选其一)
-              owner (token拥有者 和creator参数必选其一)
+parameter:    creator ( token 创建者 和 owner 参数必选其一)
+              owner ( token 拥有者 和 creator 参数必选其一)
               
 response:     {"code": 200, "message": "success", data: [{}, ...]  成功
               {"code": 400, "message": <descripton>}  参数错误
