@@ -5,6 +5,7 @@ let config = require('./config');
 let pasarContractABI = require('./pasarABI');
 let stickerContractABI = require('./stickerABI');
 let sendMail = require('./send_mail');
+const BigNumber = require("bignumber.js");
 
 module.exports = {
     run: function() {
@@ -173,6 +174,8 @@ module.exports = {
                         let token = {blockNumber: event.blockNumber, tokenIndex: result.tokenIndex, tokenId,
                             quantity: result.tokenSupply, royalties:result.royaltyFee, royaltyOwner: result.royaltyOwner,
                             holder: result.royaltyOwner, createTime: result.createTime, updateTime: result.updateTime}
+
+                        token.tokenIdHex = '0x' + new BigNumber(tokenId).toString(16);
 
                         let tokenCID = result.tokenUri.split(":")[2];
 

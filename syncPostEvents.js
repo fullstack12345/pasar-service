@@ -4,6 +4,7 @@ let pasarDBService = require('./service/pasarDBService');
 let config = require('./config');
 let pasarContractABI = require('./pasarABI');
 let stickerContractABI = require('./stickerABI');
+const BigNumber = require("bignumber.js");
 
 const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
 
@@ -167,6 +168,8 @@ let tokenInfoSyncJobId = schedule.scheduleJob({start: new Date(now + 2 * 60 * 10
                         quantity: result.tokenSupply, royalties: result.royaltyFee, royaltyOwner: result.royaltyOwner,
                         holder: result.royaltyOwner, createTime: result.createTime, updateTime: result.updateTime
                     }
+
+                    token.tokenIdHex = '0x' + new BigNumber(tokenId).toString(16);
 
                     let tokenCID = result.tokenUri.split(":")[2];
 
