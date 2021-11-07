@@ -25,8 +25,6 @@ let web3Rpc = new Web3(config.escRpcUrl);
 let pasarContract = new web3Rpc.eth.Contract(pasarContractABI, config.pasarContract);
 let stickerContract = new web3Rpc.eth.Contract(stickerContractABI, config.stickerContract);
 
-let isGetForSaleOrderJobRun = false;
-let isGetTokenInfoJobRun = false;
 let now = Date.now();
 
 let updateOrder = function (orderId, blockNumber) {
@@ -50,7 +48,7 @@ let orderForSaleJobCurrent = 7801378,
     orderPriceChangedJobCurrent = 7801378,
     tokenInfoSyncJobCurrent = 7744408;
 
-let orderForSaleJobId = schedule.scheduleJob({start: new Date(now + 60 * 1000), rule: '0 * * * * *'}, async () => {
+schedule.scheduleJob({start: new Date(now + 60 * 1000), rule: '0 * * * * *'}, async () => {
     console.log(`[OrderForSale] Sync ${orderForSaleJobCurrent} ~ ${orderForSaleJobCurrent + 1000} ...`)
 
     pasarContractWs.getPastEvents('OrderForSale', {
@@ -72,7 +70,7 @@ let orderForSaleJobId = schedule.scheduleJob({start: new Date(now + 60 * 1000), 
     })
 });
 
-let orderFilledJobId = schedule.scheduleJob({start: new Date(now + 5 * 60 * 1000), rule: '10 * * * * *'}, async () => {
+schedule.scheduleJob({start: new Date(now + 5 * 60 * 1000), rule: '10 * * * * *'}, async () => {
     console.log(`[OrderFilled] Sync ${orderFilledJobCurrent} ~ ${orderFilledJobCurrent + 1000} ...`)
 
     pasarContractWs.getPastEvents('OrderFilled', {
@@ -94,7 +92,7 @@ let orderFilledJobId = schedule.scheduleJob({start: new Date(now + 5 * 60 * 1000
     })
 });
 
-let orderCanceledJobId = schedule.scheduleJob({start: new Date(now + 5 * 60 * 1000), rule: '20 * * * * *'}, async () => {
+schedule.scheduleJob({start: new Date(now + 5 * 60 * 1000), rule: '20 * * * * *'}, async () => {
     console.log(`[OrderCanceled] Sync ${orderCanceledJobCurrent} ~ ${orderCanceledJobCurrent + 1000} ...`)
 
     pasarContractWs.getPastEvents('OrderCanceled', {
@@ -117,7 +115,7 @@ let orderCanceledJobId = schedule.scheduleJob({start: new Date(now + 5 * 60 * 10
 });
 
 
-let orderPriceChangedJobId = schedule.scheduleJob({start: new Date(now + 5 * 60 * 1000), rule: '30 * * * * *'}, async () => {
+schedule.scheduleJob({start: new Date(now + 5 * 60 * 1000), rule: '30 * * * * *'}, async () => {
     console.log(`[OrderPriceChanged] Sync ${orderPriceChangedJobCurrent} ~ ${orderPriceChangedJobCurrent + 1000} ...`)
 
     pasarContractWs.getPastEvents('OrderPriceChanged', {
@@ -140,7 +138,7 @@ let orderPriceChangedJobId = schedule.scheduleJob({start: new Date(now + 5 * 60 
     })
 });
 
-let tokenInfoSyncJobId = schedule.scheduleJob({start: new Date(now + 2 * 60 * 1000), rule: '40 * * * * *'}, async () => {
+schedule.scheduleJob({start: new Date(now + 2 * 60 * 1000), rule: '40 * * * * *'}, async () => {
     const burnAddress = '0x0000000000000000000000000000000000000000';
 
     console.log(`[TokenInfo] Sync ${tokenInfoSyncJobCurrent} ~ ${tokenInfoSyncJobCurrent + 1000} ...`)
@@ -196,6 +194,5 @@ let tokenInfoSyncJobId = schedule.scheduleJob({start: new Date(now + 2 * 60 * 10
     }).catch(error => {
         console.log(error);
         console.log("[TokenInfo] Sync Ending ...");
-        isGetTokenInfoJobRun = false
     })
 })

@@ -219,22 +219,24 @@ module.exports = {
         /**
          *  Pasar order sync check
          */
-        schedule.scheduleJob({start: new Date(now + 60 * 1000), rule: '0 */2 * * * *'}, async () => {
+        schedule.scheduleJob({start: new Date(now + 60 * 1000), rule: '*/2 * * * *'}, async () => {
             let orderCount = await pasarDBService.pasarOrderCount();
             let orderCountContract = await pasarContract.methods.getOrderCount().call();
             if(orderCountContract - orderCount > 2) {
-                sendMail("Pasar Order Sync", "pasar assist sync service sync failed", recipients.join());
+                logger.warn(`[Order Check] DbCount: ${orderCount}   ContractCount: ${orderCountContract}`)
+                //sendMail("Pasar Order Sync", "pasar assist sync service sync failed", recipients.join());
             }
         });
 
         /**
          *  Sticker sync check
          */
-        schedule.scheduleJob({start: new Date(now + 60 * 1000), rule: '0 */2 * * * *'}, async () => {
+        schedule.scheduleJob({start: new Date(now + 60 * 1000), rule: '*/2 * * * *'}, async () => {
             let stickerCount = await pasarDBService.stickerCount();
             let stickerCountContract = await stickerContract.methods.totalSupply().call();
             if(stickerCountContract - stickerCount > 2) {
-                sendMail("Sticker Sync", "pasar assist sync service sync failed", recipients.join());
+                logger.warn(`[Token Check] DbCount: ${stickerCount}   ContractCount: ${stickerCountContract}`)
+                //sendMail("Sticker Sync", "pasar assist sync service sync failed", recipients.join());
             }
         });
     }

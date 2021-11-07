@@ -174,7 +174,7 @@ module.exports = {
         try {
             await mongoClient.connect();
             const collection = mongoClient.db(config.dbName).collection('pasar_order');
-            return await collection.find().count();
+            return await collection.find({}).count();
         } catch (err) {
             logger.error(err);
         } finally {
@@ -187,7 +187,7 @@ module.exports = {
         try {
             await mongoClient.connect();
             const collection = mongoClient.db(config.dbName).collection('pasar_token');
-            return await collection.find().count();
+            return await collection.find({}).count();
         } catch (err) {
             logger.error(err);
         } finally {

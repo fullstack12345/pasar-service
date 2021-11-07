@@ -334,7 +334,7 @@ response:     {"code": 200, "message": "success", data: [{}, ...]}  成功
               {"code": 500, "message": <descripton>}  服务器错误
 ```
 
-## Sticker Api
+## Sticker API
 
 调用URL: `https://example.com/sticker/api/v1`
 
