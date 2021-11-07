@@ -48,11 +48,19 @@ let orderForSaleJobCurrent = 7801378,
     orderPriceChangedJobCurrent = 7801378,
     tokenInfoSyncJobCurrent = 7744408;
 
+let currentHeight = web3Rpc.eth.getBlockNumber();
+
 schedule.scheduleJob({start: new Date(now + 60 * 1000), rule: '0 * * * * *'}, async () => {
-    console.log(`[OrderForSale] Sync ${orderForSaleJobCurrent} ~ ${orderForSaleJobCurrent + 1000} ...`)
+    if(orderForSaleJobCurrent > currentHeight) {
+        return;
+    }
+    let tempBlockNumber = orderForSaleJobCurrent + 1000
+    let toBlock = tempBlockNumber > currentHeight ? currentHeight : tempBlockNumber;
+
+    console.log(`[OrderForSale] Sync ${orderForSaleJobCurrent} ~ ${toBlock} ...`)
 
     pasarContractWs.getPastEvents('OrderForSale', {
-        fromBlock: orderForSaleJobCurrent, toBlock: orderForSaleJobCurrent + 1000
+        fromBlock: orderForSaleJobCurrent, toBlock
     }).then(events => {
         events.forEach(event => {
             let orderInfo = event.returnValues;
@@ -63,7 +71,7 @@ schedule.scheduleJob({start: new Date(now + 60 * 1000), rule: '0 * * * * *'}, as
             pasarDBService.insertOrderEvent(orderEventDetail);
             updateOrder(orderInfo._orderId, event.blockNumber);
         })
-        orderForSaleJobCurrent += 1001;
+        orderForSaleJobCurrent += toBlock + 1;
     }).catch(error => {
         console.log(error);
         console.log("[OrderForSale] Sync Ending ...")
@@ -71,10 +79,17 @@ schedule.scheduleJob({start: new Date(now + 60 * 1000), rule: '0 * * * * *'}, as
 });
 
 schedule.scheduleJob({start: new Date(now + 5 * 60 * 1000), rule: '10 * * * * *'}, async () => {
-    console.log(`[OrderFilled] Sync ${orderFilledJobCurrent} ~ ${orderFilledJobCurrent + 1000} ...`)
+    if(orderFilledJobCurrent > currentHeight) {
+        return;
+    }
+
+    let tempBlockNumber = orderFilledJobCurrent + 1000
+    let toBlock = tempBlockNumber > currentHeight ? currentHeight : tempBlockNumber;
+
+    console.log(`[OrderFilled] Sync ${orderFilledJobCurrent} ~ ${toBlock} ...`)
 
     pasarContractWs.getPastEvents('OrderFilled', {
-        fromBlock: orderFilledJobCurrent, toBlock: orderFilledJobCurrent + 1000
+        fromBlock: orderFilledJobCurrent, toBlock
     }).then(events => {
         events.forEach(event => {
             let orderInfo = event.returnValues;
@@ -85,7 +100,7 @@ schedule.scheduleJob({start: new Date(now + 5 * 60 * 1000), rule: '10 * * * * *'
             pasarDBService.insertOrderEvent(orderEventDetail);
             updateOrder(orderInfo._orderId, event.blockNumber);
         })
-        orderFilledJobCurrent += 1001;
+        orderFilledJobCurrent += toBlock + 1;
     }).catch( error => {
         console.log(error);
         console.log("[OrderFilled] Sync Ending ...");
@@ -93,10 +108,17 @@ schedule.scheduleJob({start: new Date(now + 5 * 60 * 1000), rule: '10 * * * * *'
 });
 
 schedule.scheduleJob({start: new Date(now + 5 * 60 * 1000), rule: '20 * * * * *'}, async () => {
-    console.log(`[OrderCanceled] Sync ${orderCanceledJobCurrent} ~ ${orderCanceledJobCurrent + 1000} ...`)
+    if(orderCanceledJobCurrent > currentHeight) {
+        return;
+    }
+
+    let tempBlockNumber = orderCanceledJobCurrent + 1000
+    let toBlock = tempBlockNumber > currentHeight ? currentHeight : tempBlockNumber;
+
+    console.log(`[OrderCanceled] Sync ${orderCanceledJobCurrent} ~ ${toBlock} ...`)
 
     pasarContractWs.getPastEvents('OrderCanceled', {
-        fromBlock: orderCanceledJobCurrent, toBlock: orderCanceledJobCurrent + 1000
+        fromBlock: orderCanceledJobCurrent, toBlock
     }).then(events => {
         events.forEach(event => {
             let orderInfo = event.returnValues;
@@ -107,7 +129,7 @@ schedule.scheduleJob({start: new Date(now + 5 * 60 * 1000), rule: '20 * * * * *'
             pasarDBService.insertOrderEvent(orderEventDetail);
             updateOrder(orderInfo._orderId, event.blockNumber);
         })
-        orderCanceledJobCurrent += 1001;
+        orderCanceledJobCurrent += toBlock + 1;
     }).catch( error => {
         console.log(error);
         console.log("[OrderCanceled] Sync Ending ...");
@@ -116,10 +138,17 @@ schedule.scheduleJob({start: new Date(now + 5 * 60 * 1000), rule: '20 * * * * *'
 
 
 schedule.scheduleJob({start: new Date(now + 5 * 60 * 1000), rule: '30 * * * * *'}, async () => {
-    console.log(`[OrderPriceChanged] Sync ${orderPriceChangedJobCurrent} ~ ${orderPriceChangedJobCurrent + 1000} ...`)
+    if(orderPriceChangedJobCurrent > currentHeight) {
+        return;
+    }
+
+    let tempBlockNumber = orderPriceChangedJobCurrent + 1000
+    let toBlock = tempBlockNumber > currentHeight ? currentHeight : tempBlockNumber;
+
+    console.log(`[OrderPriceChanged] Sync ${orderPriceChangedJobCurrent} ~ ${toBlock} ...`)
 
     pasarContractWs.getPastEvents('OrderPriceChanged', {
-        fromBlock: orderPriceChangedJobCurrent, toBlock: orderPriceChangedJobCurrent + 1000
+        fromBlock: orderPriceChangedJobCurrent, toBlock
     }).then(events => {
         events.forEach(event => {
             let orderInfo = event.returnValues;
@@ -131,7 +160,7 @@ schedule.scheduleJob({start: new Date(now + 5 * 60 * 1000), rule: '30 * * * * *'
             updateOrder(orderInfo._orderId, event.blockNumber);
         })
 
-        orderPriceChangedJobCurrent += 1001;
+        orderPriceChangedJobCurrent += toBlock + 1;
     }).catch( error => {
         console.log(error);
         console.log("[OrderPriceChanged] Sync Ending ...");
@@ -139,12 +168,19 @@ schedule.scheduleJob({start: new Date(now + 5 * 60 * 1000), rule: '30 * * * * *'
 });
 
 schedule.scheduleJob({start: new Date(now + 2 * 60 * 1000), rule: '40 * * * * *'}, async () => {
+    if(tokenInfoSyncJobCurrent > currentHeight) {
+        return;
+    }
+
     const burnAddress = '0x0000000000000000000000000000000000000000';
 
-    console.log(`[TokenInfo] Sync ${tokenInfoSyncJobCurrent} ~ ${tokenInfoSyncJobCurrent + 1000} ...`)
+    let tempBlockNumber = tokenInfoSyncJobCurrent + 1000
+    let toBlock = tempBlockNumber > currentHeight ? currentHeight : tempBlockNumber;
+
+    console.log(`[TokenInfo] Sync ${tokenInfoSyncJobCurrent} ~ ${toBlock} ...`)
 
     stickerContractWs.getPastEvents('TransferSingle', {
-        fromBlock: tokenInfoSyncJobCurrent, toBlock: tokenInfoSyncJobCurrent + 1000
+        fromBlock: tokenInfoSyncJobCurrent, toBlock
     }).then(events => {
         events.forEach(async event => {
             let from = event.returnValues._from;
@@ -190,7 +226,7 @@ schedule.scheduleJob({start: new Date(now + 2 * 60 * 1000), rule: '40 * * * * *'
             await pasarDBService.updateToken(tokenId, to);
         })
 
-        tokenInfoSyncJobCurrent += 1001;
+        tokenInfoSyncJobCurrent += toBlock + 1;
     }).catch(error => {
         console.log(error);
         console.log("[TokenInfo] Sync Ending ...");
