@@ -49,8 +49,7 @@ let orderForSaleJobCurrent = 7801378,
     tokenInfoSyncJobCurrent = 7744408;
 
 const step = 5000;
-web3Rpc.eth.getBlockNumber().then(result => {
-    const currentHeight = parseInt(result);
+web3Rpc.eth.getBlockNumber().then(currentHeight => {
     schedule.scheduleJob({start: new Date(now + 60 * 1000), rule: '0 * * * * *'}, async () => {
         if(orderForSaleJobCurrent > currentHeight) {
             return;
