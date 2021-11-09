@@ -224,7 +224,7 @@ module.exports = {
             let orderCountContract = await pasarContract.methods.getOrderCount().call();
             if(orderCountContract - orderCount > 2) {
                 logger.warn(`[Order Check] DbCount: ${orderCount}   ContractCount: ${orderCountContract}`)
-                //sendMail("Pasar Order Sync", "pasar assist sync service sync failed", recipients.join());
+                sendMail("Pasar Order Sync", "pasar assist sync service sync failed", recipients.join());
             }
         });
 
@@ -236,7 +236,7 @@ module.exports = {
             let stickerCountContract = await stickerContract.methods.totalSupply().call();
             if(stickerCountContract - stickerCount > 2) {
                 logger.warn(`[Token Check] DbCount: ${stickerCount}   ContractCount: ${stickerCountContract}`)
-                //sendMail("Sticker Sync", "pasar assist sync service sync failed", recipients.join());
+                sendMail("Sticker Sync", "pasar assist sync service sync failed", recipients.join());
             }
         });
     }

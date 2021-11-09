@@ -71,7 +71,7 @@ schedule.scheduleJob({start: new Date(now + 60 * 1000), rule: '0 * * * * *'}, as
             pasarDBService.insertOrderEvent(orderEventDetail);
             updateOrder(orderInfo._orderId, event.blockNumber);
         })
-        orderForSaleJobCurrent += toBlock + 1;
+        orderForSaleJobCurrent = tempBlockNumber + 1;
     }).catch(error => {
         console.log(error);
         console.log("[OrderForSale] Sync Ending ...")
@@ -100,7 +100,7 @@ schedule.scheduleJob({start: new Date(now + 5 * 60 * 1000), rule: '10 * * * * *'
             pasarDBService.insertOrderEvent(orderEventDetail);
             updateOrder(orderInfo._orderId, event.blockNumber);
         })
-        orderFilledJobCurrent += toBlock + 1;
+        orderFilledJobCurrent = tempBlockNumber + 1;
     }).catch( error => {
         console.log(error);
         console.log("[OrderFilled] Sync Ending ...");
@@ -129,7 +129,7 @@ schedule.scheduleJob({start: new Date(now + 5 * 60 * 1000), rule: '20 * * * * *'
             pasarDBService.insertOrderEvent(orderEventDetail);
             updateOrder(orderInfo._orderId, event.blockNumber);
         })
-        orderCanceledJobCurrent += toBlock + 1;
+        orderCanceledJobCurrent = tempBlockNumber + 1;
     }).catch( error => {
         console.log(error);
         console.log("[OrderCanceled] Sync Ending ...");
@@ -160,7 +160,7 @@ schedule.scheduleJob({start: new Date(now + 5 * 60 * 1000), rule: '30 * * * * *'
             updateOrder(orderInfo._orderId, event.blockNumber);
         })
 
-        orderPriceChangedJobCurrent += toBlock + 1;
+        orderPriceChangedJobCurrent = tempBlockNumber + 1;
     }).catch( error => {
         console.log(error);
         console.log("[OrderPriceChanged] Sync Ending ...");
@@ -226,7 +226,7 @@ schedule.scheduleJob({start: new Date(now + 2 * 60 * 1000), rule: '40 * * * * *'
             await pasarDBService.updateToken(tokenId, to);
         })
 
-        tokenInfoSyncJobCurrent += toBlock + 1;
+        tokenInfoSyncJobCurrent = tempBlockNumber + 1;
     }).catch(error => {
         console.log(error);
         console.log("[TokenInfo] Sync Ending ...");
