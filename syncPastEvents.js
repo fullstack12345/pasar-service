@@ -48,14 +48,15 @@ let orderForSaleJobCurrent = 7801378,
     orderPriceChangedJobCurrent = 7801378,
     tokenInfoSyncJobCurrent = 7744408;
 
-let currentHeight = web3Rpc.eth.getBlockNumber();
+const step = 5000;
+const currentHeight = web3Rpc.eth.getBlockNumber();
 
 schedule.scheduleJob({start: new Date(now + 60 * 1000), rule: '0 * * * * *'}, async () => {
     if(orderForSaleJobCurrent > currentHeight) {
         return;
     }
-    let tempBlockNumber = orderForSaleJobCurrent + 1000
-    let toBlock = tempBlockNumber > currentHeight ? currentHeight : tempBlockNumber;
+    const tempBlockNumber = orderForSaleJobCurrent + step
+    const toBlock = tempBlockNumber > currentHeight ? currentHeight : tempBlockNumber;
 
     console.log(`[OrderForSale] Sync ${orderForSaleJobCurrent} ~ ${toBlock} ...`)
 
@@ -83,8 +84,8 @@ schedule.scheduleJob({start: new Date(now + 5 * 60 * 1000), rule: '10 * * * * *'
         return;
     }
 
-    let tempBlockNumber = orderFilledJobCurrent + 1000
-    let toBlock = tempBlockNumber > currentHeight ? currentHeight : tempBlockNumber;
+    const tempBlockNumber = orderFilledJobCurrent + step
+    const toBlock = tempBlockNumber > currentHeight ? currentHeight : tempBlockNumber;
 
     console.log(`[OrderFilled] Sync ${orderFilledJobCurrent} ~ ${toBlock} ...`)
 
@@ -112,8 +113,8 @@ schedule.scheduleJob({start: new Date(now + 5 * 60 * 1000), rule: '20 * * * * *'
         return;
     }
 
-    let tempBlockNumber = orderCanceledJobCurrent + 1000
-    let toBlock = tempBlockNumber > currentHeight ? currentHeight : tempBlockNumber;
+    const tempBlockNumber = orderCanceledJobCurrent + step
+    const toBlock = tempBlockNumber > currentHeight ? currentHeight : tempBlockNumber;
 
     console.log(`[OrderCanceled] Sync ${orderCanceledJobCurrent} ~ ${toBlock} ...`)
 
@@ -142,8 +143,8 @@ schedule.scheduleJob({start: new Date(now + 5 * 60 * 1000), rule: '30 * * * * *'
         return;
     }
 
-    let tempBlockNumber = orderPriceChangedJobCurrent + 1000
-    let toBlock = tempBlockNumber > currentHeight ? currentHeight : tempBlockNumber;
+    const tempBlockNumber = orderPriceChangedJobCurrent + step
+    const toBlock = tempBlockNumber > currentHeight ? currentHeight : tempBlockNumber;
 
     console.log(`[OrderPriceChanged] Sync ${orderPriceChangedJobCurrent} ~ ${toBlock} ...`)
 
@@ -174,8 +175,8 @@ schedule.scheduleJob({start: new Date(now + 2 * 60 * 1000), rule: '40 * * * * *'
 
     const burnAddress = '0x0000000000000000000000000000000000000000';
 
-    let tempBlockNumber = tokenInfoSyncJobCurrent + 1000
-    let toBlock = tempBlockNumber > currentHeight ? currentHeight : tempBlockNumber;
+    const tempBlockNumber = tokenInfoSyncJobCurrent + step
+    const toBlock = tempBlockNumber > currentHeight ? currentHeight : tempBlockNumber;
 
     console.log(`[TokenInfo] Sync ${tokenInfoSyncJobCurrent} ~ ${toBlock} ...`)
 
