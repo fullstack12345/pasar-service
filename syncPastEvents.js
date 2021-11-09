@@ -52,6 +52,7 @@ const step = 5000;
 web3Rpc.eth.getBlockNumber().then(currentHeight => {
     schedule.scheduleJob({start: new Date(now + 60 * 1000), rule: '0 * * * * *'}, async () => {
         if(orderForSaleJobCurrent > currentHeight) {
+            console.log(`[OrderForSale] Sync ${orderForSaleJobCurrent} finished`)
             return;
         }
         const tempBlockNumber = orderForSaleJobCurrent + step
@@ -80,6 +81,7 @@ web3Rpc.eth.getBlockNumber().then(currentHeight => {
 
     schedule.scheduleJob({start: new Date(now + 5 * 60 * 1000), rule: '10 * * * * *'}, async () => {
         if(orderFilledJobCurrent > currentHeight) {
+            console.log(`[OrderFilled] Sync ${orderFilledJobCurrent} finished`)
             return;
         }
 
@@ -109,6 +111,7 @@ web3Rpc.eth.getBlockNumber().then(currentHeight => {
 
     schedule.scheduleJob({start: new Date(now + 5 * 60 * 1000), rule: '20 * * * * *'}, async () => {
         if(orderCanceledJobCurrent > currentHeight) {
+            console.log(`[OrderCanceled] Sync ${orderCanceledJobCurrent} finished`)
             return;
         }
 
@@ -139,6 +142,7 @@ web3Rpc.eth.getBlockNumber().then(currentHeight => {
 
     schedule.scheduleJob({start: new Date(now + 5 * 60 * 1000), rule: '30 * * * * *'}, async () => {
         if(orderPriceChangedJobCurrent > currentHeight) {
+            console.log(`[OrderPriceChanged] Sync ${orderPriceChangedJobCurrent} finished`)
             return;
         }
 
@@ -169,6 +173,7 @@ web3Rpc.eth.getBlockNumber().then(currentHeight => {
 
     schedule.scheduleJob({start: new Date(now + 2 * 60 * 1000), rule: '40 * * * * *'}, async () => {
         if(tokenInfoSyncJobCurrent > currentHeight) {
+            console.log(`[TokenInfo] Sync ${tokenInfoSyncJobCurrent} finished`)
             return;
         }
 
@@ -223,7 +228,7 @@ web3Rpc.eth.getBlockNumber().then(currentHeight => {
                     }
                     return;
                 }
-                await pasarDBService.updateToken(tokenId, to);
+                await pasarDBService.updateToken(tokenId, to, event.blockNumber);
             })
 
             tokenInfoSyncJobCurrent = tempBlockNumber + 1;

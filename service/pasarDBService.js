@@ -90,7 +90,10 @@ module.exports = {
         try {
             await mongoClient.connect();
             const collection = mongoClient.db(config.dbName).collection('pasar_token');
-            await collection.updateOne({tokenId}, {$set: {royaltyOwner: '0x0000000000000000000000000000000000000000'}});
+            await collection.updateOne({tokenId}, {$set: {
+                    royaltyOwner: '0x0000000000000000000000000000000000000000',
+                    holder: '0x0000000000000000000000000000000000000000'
+                }});
         } catch (err) {
             logger.error(err);
             throw new Error();
@@ -99,12 +102,12 @@ module.exports = {
         }
     },
 
-    updateToken: async function (tokenId, holder) {
+    updateToken: async function (tokenId, holder, blockNumber) {
         let mongoClient = new MongoClient(config.mongodb, {useNewUrlParser: true, useUnifiedTopology: true});
         try {
             await mongoClient.connect();
             const collection = mongoClient.db(config.dbName).collection('pasar_token');
-            await collection.updateOne({tokenId}, {$set: {holder}});
+            await collection.updateOne({tokenId, blockNumber: {"$lt": blockNumber}}, {$set: {holder}});
         } catch (err) {
             logger.error(err);
             throw new Error();

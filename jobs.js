@@ -197,7 +197,7 @@ module.exports = {
                 }
 
                 //update token holder
-                await pasarDBService.updateToken(tokenId, to);
+                await pasarDBService.updateToken(tokenId, to, event.blockNumber);
             })
         });
 
