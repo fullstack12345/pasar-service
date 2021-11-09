@@ -221,10 +221,12 @@ module.exports = {
          */
         schedule.scheduleJob({start: new Date(now + 60 * 1000), rule: '*/2 * * * *'}, async () => {
             let orderCount = await pasarDBService.pasarOrderCount();
-            let orderCountContract = await pasarContract.methods.getOrderCount().call();
+            let orderCountContract = parseInt(await pasarContract.methods.getOrderCount().call());
             if(orderCountContract !== orderCount) {
                 logger.warn(`[Order Check] DbCount: ${orderCount}   ContractCount: ${orderCountContract}`)
-                await sendMail("Pasar Order Sync", "pasar assist sync service sync failed", recipients.join());
+                await sendMail(`Pasar Order Sync [${config.serviceName}]`,
+                    `pasar assist sync service sync failed!\nDbCount: ${orderCount}   ContractCount: ${orderCountContract}`,
+                    recipients.join());
             }
         });
 
@@ -233,10 +235,12 @@ module.exports = {
          */
         schedule.scheduleJob({start: new Date(now + 60 * 1000), rule: '*/2 * * * *'}, async () => {
             let stickerCount = await pasarDBService.stickerCount();
-            let stickerCountContract = await stickerContract.methods.totalSupply().call();
+            let stickerCountContract = parseInt(await stickerContract.methods.totalSupply().call());
             if(stickerCountContract !== stickerCount) {
                 logger.warn(`[Token Check] DbCount: ${stickerCount}   ContractCount: ${stickerCountContract}`)
-                await sendMail("Sticker Sync", "pasar assist sync service sync failed", recipients.join());
+                await sendMail(`Sticker Sync [${config.serviceName}]`,
+                    `pasar assist sync service sync failed!\nDbCount: ${stickerCount}   ContractCount: ${stickerCountContract}`,
+                    recipients.join());
             }
         });
     }

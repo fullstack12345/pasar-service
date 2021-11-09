@@ -11,5 +11,7 @@ module.exports = {
     pasarContractDeploy: 7801378,
     stickerContractDeploy: 7744408,
 
-    ipfsNodeUrl: 'https://ipfs.trinity-feeds.app/ipfs/'
+    ipfsNodeUrl: 'https://ipfs.trinity-feeds.app/ipfs/',
+
+    serviceName: ''
 }

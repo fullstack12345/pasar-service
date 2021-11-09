@@ -5,7 +5,7 @@
  */
 
 let app = require('../app');
-let debug = require('debug')('feeds-sources-api:server');
+let debug = require('debug')('pasar-assist-service:server');
 let http = require('http');
 
 /**
