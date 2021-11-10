@@ -1,6 +1,7 @@
 const schedule = require('node-schedule');
 let Web3 = require('web3');
 let pasarDBService = require('./service/pasarDBService');
+let stickerDBService = require('./service/stickerDBService');
 let config = require('./config');
 let pasarContractABI = require('./pasarABI');
 let stickerContractABI = require('./stickerABI');
@@ -191,22 +192,23 @@ web3Rpc.eth.getBlockNumber().then(currentHeight => {
                 let from = event.returnValues._from;
                 let to = event.returnValues._to;
                 let tokenId = event.returnValues._id;
+                let value = event.returnValues._value;
+                let blockNumber = event.blockNumber;
+                let timestamp = (await web3Rpc.eth.getBlock(blockNumber)).timestamp;
 
-                console.log(`[TokenInfo] Sync processing ... ${event.blockNumber} ${tokenId}`)
+                let transferEvent = {tokenId, blockNumber, timestamp, from, to, value, memo: ""}
+                await stickerDBService.addEvent(transferEvent);
 
-                if (to === burnAddress) {
-                    await pasarDBService.burnToken(tokenId);
+                if(to === burnAddress) {
+                    await stickerDBService.burnToken(tokenId);
                     return;
                 }
 
-                if (from === burnAddress) {
+                if(from === burnAddress) {
                     try {
                         let result = await stickerContract.methods.tokenInfo(tokenId).call();
-                        let token = {
-                            blockNumber: event.blockNumber, tokenIndex: result.tokenIndex, tokenId,
-                            quantity: result.tokenSupply, royalties: result.royaltyFee, royaltyOwner: result.royaltyOwner,
-                            holder: result.royaltyOwner, createTime: result.createTime, updateTime: result.updateTime
-                        }
+                        let token = {blockNumber, tokenIndex: result.tokenIndex, tokenId, quantity: result.tokenSupply,
+                            royalties:result.royaltyFee, royaltyOwner: result.royaltyOwner, createTime: result.createTime}
 
                         token.tokenIdHex = '0x' + new BigNumber(tokenId).toString(16);
 
@@ -221,16 +223,13 @@ web3Rpc.eth.getBlockNumber().then(currentHeight => {
                         token.description = data.description;
                         token.thumbnail = data.thumbnail;
 
-                        await pasarDBService.replaceToken(token);
+                        await stickerDBService.replaceToken(token);
                     } catch (e) {
-                        console.log(`[TokenInfo] Sync error at ${event.blockNumber} ${tokenId}`);
-                        console.log(e);
+                        logger.info(`[TokenInfo] Sync error at ${event.blockNumber} ${tokenId}`);
+                        logger.info(e);
                     }
-                    return;
                 }
-                await pasarDBService.updateToken(tokenId, to, event.blockNumber);
             })
-
             tokenInfoSyncJobCurrent = tempBlockNumber + 1;
         }).catch(error => {
             console.log(error);

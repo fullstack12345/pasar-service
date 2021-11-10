@@ -18,6 +18,64 @@ module.exports = {
         }
     },
 
+    addEvent: async function(transferEvent) {
+        let client = new MongoClient(config.mongodb, {useNewUrlParser: true, useUnifiedTopology: true});
+        try {
+            await client.connect();
+            const collection = client.db(config.dbName).collection('pasar_token_event');
+            await collection.insertOne(transferEvent);
+        } catch (err) {
+            logger.error(err);
+        } finally {
+            await client.close();
+        }
+    },
+
+    burnToken: async function (tokenId) {
+        let mongoClient = new MongoClient(config.mongodb, {useNewUrlParser: true, useUnifiedTopology: true});
+        try {
+            await mongoClient.connect();
+            const collection = mongoClient.db(config.dbName).collection('pasar_token');
+            await collection.updateOne({tokenId}, {$set: {
+                    royaltyOwner: '0x0000000000000000000000000000000000000000',
+                    holder: '0x0000000000000000000000000000000000000000'
+                }});
+        } catch (err) {
+            logger.error(err);
+            throw new Error();
+        } finally {
+            await mongoClient.close();
+        }
+    },
+
+    replaceToken: async function (token) {
+        let mongoClient = new MongoClient(config.mongodb, {useNewUrlParser: true, useUnifiedTopology: true});
+        try {
+            await mongoClient.connect();
+            const collection = mongoClient.db(config.dbName).collection('pasar_token');
+            await collection.replaceOne({tokenId: token.tokenId}, token, {upsert: true});
+        } catch (err) {
+            logger.error(err);
+            throw new Error();
+        } finally {
+            await mongoClient.close();
+        }
+    },
+
+    updateToken: async function (tokenId, holder, blockNumber) {
+        let mongoClient = new MongoClient(config.mongodb, {useNewUrlParser: true, useUnifiedTopology: true});
+        try {
+            await mongoClient.connect();
+            const collection = mongoClient.db(config.dbName).collection('pasar_token');
+            await collection.updateOne({tokenId, blockNumber: {"$lt": blockNumber}}, {$set: {holder}});
+        } catch (err) {
+            logger.error(err);
+            throw new Error();
+        } finally {
+            await mongoClient.close();
+        }
+    },
+
     search: async function(keyword) {
         let client = new MongoClient(config.mongodb, {useNewUrlParser: true, useUnifiedTopology: true});
         try {
@@ -56,4 +114,17 @@ module.exports = {
             await client.close();
         }
     },
+
+    stickerCount: async function() {
+        let mongoClient = new MongoClient(config.mongodb, {useNewUrlParser: true, useUnifiedTopology: true});
+        try {
+            await mongoClient.connect();
+            const collection = mongoClient.db(config.dbName).collection('pasar_token');
+            return await collection.find({}).count();
+        } catch (err) {
+            logger.error(err);
+        } finally {
+            await mongoClient.close();
+        }
+    }
 }

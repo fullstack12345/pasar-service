@@ -1,6 +1,7 @@
 const schedule = require('node-schedule');
 let Web3 = require('web3');
 let pasarDBService = require('./service/pasarDBService');
+let stickerDBService = require('./service/stickerDBService');
 let config = require('./config');
 let pasarContractABI = require('./pasarABI');
 let stickerContractABI = require('./stickerABI');
@@ -157,23 +158,27 @@ module.exports = {
                 logger.info("[TokenInfo] Sync Ending ...");
                 isGetTokenInfoJobRun = false
             }).on("data", async function (event) {
+
                 let from = event.returnValues._from;
                 let to = event.returnValues._to;
                 let tokenId = event.returnValues._id;
+                let value = event.returnValues._value;
+                let blockNumber = event.blockNumber;
+                let timestamp = (await web3Rpc.eth.getBlock(blockNumber)).timestamp;
 
-                logger.info(`[TokenInfo] Sync processing ... ${event.blockNumber} ${tokenId}`)
+                let transferEvent = {tokenId, blockNumber, timestamp, from, to, value}
+                await stickerDBService.addEvent(transferEvent);
 
                 if(to === burnAddress) {
-                    await pasarDBService.burnToken(tokenId);
+                    await stickerDBService.burnToken(tokenId);
                     return;
                 }
 
                 if(from === burnAddress) {
                     try {
                         let result = await stickerContract.methods.tokenInfo(tokenId).call();
-                        let token = {blockNumber: event.blockNumber, tokenIndex: result.tokenIndex, tokenId,
-                            quantity: result.tokenSupply, royalties:result.royaltyFee, royaltyOwner: result.royaltyOwner,
-                            holder: result.royaltyOwner, createTime: result.createTime, updateTime: result.updateTime}
+                        let token = {blockNumber, tokenIndex: result.tokenIndex, tokenId, quantity: result.tokenSupply,
+                            royalties:result.royaltyFee, royaltyOwner: result.royaltyOwner, createTime: result.createTime}
 
                         token.tokenIdHex = '0x' + new BigNumber(tokenId).toString(16);
 
@@ -188,16 +193,13 @@ module.exports = {
                         token.description = data.description;
                         token.thumbnail = data.thumbnail;
 
-                        await pasarDBService.replaceToken(token);
+                        await stickerDBService.replaceToken(token);
                     } catch (e) {
                         logger.info(`[TokenInfo] Sync error at ${event.blockNumber} ${tokenId}`);
                         logger.info(e);
                     }
-                    return;
                 }
 
-                //update token holder
-                await pasarDBService.updateToken(tokenId, to, event.blockNumber);
             })
         });
 
@@ -234,7 +236,7 @@ module.exports = {
          *  Sticker sync check
          */
         schedule.scheduleJob({start: new Date(now + 60 * 1000), rule: '*/2 * * * *'}, async () => {
-            let stickerCount = await pasarDBService.stickerCount();
+            let stickerCount = await stickerDBService.stickerCount();
             let stickerCountContract = parseInt(await stickerContract.methods.totalSupply().call());
             logger.info(`[Token Count Check] DbCount: ${stickerCount}   ContractCount: ${stickerCountContract}`)
             if(stickerCountContract !== stickerCount) {
