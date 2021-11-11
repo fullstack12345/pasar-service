@@ -196,7 +196,7 @@ web3Rpc.eth.getBlockNumber().then(currentHeight => {
                 let blockNumber = event.blockNumber;
                 let timestamp = (await web3Rpc.eth.getBlock(blockNumber)).timestamp;
 
-                let transferEvent = {tokenId, blockNumber, timestamp, from, to, value, memo: ""}
+                let transferEvent = {tokenId, blockNumber, timestamp, from, to, value}
                 await stickerDBService.addEvent(transferEvent);
 
                 if(to === burnAddress) {
@@ -208,7 +208,8 @@ web3Rpc.eth.getBlockNumber().then(currentHeight => {
                     try {
                         let result = await stickerContract.methods.tokenInfo(tokenId).call();
                         let token = {blockNumber, tokenIndex: result.tokenIndex, tokenId, quantity: result.tokenSupply,
-                            royalties:result.royaltyFee, royaltyOwner: result.royaltyOwner, createTime: result.createTime}
+                            royalties:result.royaltyFee, royaltyOwner: result.royaltyOwner,
+                            createTime: result.createTime, updateTime: result.updateTime}
 
                         token.tokenIdHex = '0x' + new BigNumber(tokenId).toString(16);
 
@@ -229,6 +230,7 @@ web3Rpc.eth.getBlockNumber().then(currentHeight => {
                         logger.info(e);
                     }
                 }
+                await stickerDBService.updateToken(tokenId, to, timestamp);
             })
             tokenInfoSyncJobCurrent = tempBlockNumber + 1;
         }).catch(error => {

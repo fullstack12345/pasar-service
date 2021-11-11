@@ -178,7 +178,8 @@ module.exports = {
                     try {
                         let result = await stickerContract.methods.tokenInfo(tokenId).call();
                         let token = {blockNumber, tokenIndex: result.tokenIndex, tokenId, quantity: result.tokenSupply,
-                            royalties:result.royaltyFee, royaltyOwner: result.royaltyOwner, createTime: result.createTime}
+                            royalties:result.royaltyFee, royaltyOwner: result.royaltyOwner,
+                            createTime: result.createTime, updateTime: result.updateTime}
 
                         token.tokenIdHex = '0x' + new BigNumber(tokenId).toString(16);
 
@@ -199,7 +200,7 @@ module.exports = {
                         logger.info(e);
                     }
                 }
-
+                await stickerDBService.updateToken(tokenId, to, timestamp);
             })
         });
 

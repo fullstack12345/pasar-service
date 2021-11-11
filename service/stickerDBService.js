@@ -62,12 +62,12 @@ module.exports = {
         }
     },
 
-    updateToken: async function (tokenId, holder, blockNumber) {
+    updateToken: async function (tokenId, holder, timestamp) {
         let mongoClient = new MongoClient(config.mongodb, {useNewUrlParser: true, useUnifiedTopology: true});
         try {
             await mongoClient.connect();
             const collection = mongoClient.db(config.dbName).collection('pasar_token');
-            await collection.updateOne({tokenId, blockNumber: {"$lt": blockNumber}}, {$set: {holder}});
+            await collection.updateOne({tokenId, updateTime: {"$lt": timestamp}}, {$set: {holder, updateTime: timestamp}});
         } catch (err) {
             logger.error(err);
             throw new Error();
