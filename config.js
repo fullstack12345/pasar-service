@@ -13,5 +13,6 @@ module.exports = {
 
     ipfsNodeUrl: 'https://ipfs.trinity-feeds.app/ipfs/',
 
-    serviceName: ''
+    serviceName: 'default',
+    upgradeBlock: 9090468
 }

@@ -38,21 +38,33 @@ module.exports = {
         let recipients = [];
         recipients.push('lifayi2008@163.com');
 
-        function updateOrder(orderId, blockNumber) {
+        async function updateOrder(orderId, blockNumber) {
             logger.info(`[GetOrderInfo] orderId: ${orderId}   blockNumber: ${blockNumber}`);
-
-            pasarContract.methods.getOrderById(orderId).call().then(result => {
+            try {
+                let result = await pasarContract.methods.getOrderById(orderId).call();
                 let pasarOrder = {orderId: result.orderId, orderType: result.orderType, orderState: result.orderState,
                     tokenId: result.tokenId, amount: result.amount, price: result.price, endTime: result.endTime,
                     sellerAddr: result.sellerAddr, buyerAddr: result.buyerAddr, bids: result.bids, lastBidder: result.lastBidder,
                     lastBid: result.lastBid, filled: result.filled, royaltyOwner: result.royaltyOwner, royaltyFee: result.royaltyFee,
                     createTime: result.createTime, updateTime: result.updateTime, blockNumber}
 
-                pasarDBService.updateOrInsert(pasarOrder);
-            }).catch(error => {
+                if(result.orderState === "1" && blockNumber > config.upgradeBlock) {
+                    let extraInfo = await pasarContract.methods.getOrderExtraById(orderId).call();
+                    pasarOrder.platformAddr = extraInfo.platformAddr;
+                    pasarOrder.platformFee = extraInfo.platformFee;
+                    pasarOrder.sellerUri = extraInfo.sellerUri;
+
+                    let tokenCID = extraInfo.sellerUri.split(":")[2];
+                    let response = await fetch(config.ipfsNodeUrl + tokenCID);
+                    let data = await response.json();
+
+                    pasarOrder.sellerDid = data.did;
+                }
+                await pasarDBService.updateOrInsert(pasarOrder);
+            } catch(error) {
                 logger.info(error);
                 logger.info(`[OrderForSale] Sync - getOrderById(${orderId}) call error`);
-            })
+            }
         }
 
         let orderForSaleJobId = schedule.scheduleJob(new Date(now + 60 * 1000), async () => {
@@ -67,15 +79,15 @@ module.exports = {
                 logger.info(error);
                 logger.info("[OrderForSale] Sync Ending ...")
                 isGetForSaleOrderJobRun = false
-            }).on("data", function (event) {
+            }).on("data", async function (event) {
                 let orderInfo = event.returnValues;
                 let orderEventDetail = {orderId: orderInfo._orderId, event: event.event, blockNumber: event.blockNumber,
                     tHash: event.transactionHash, tIndex: event.transactionIndex, blockHash: event.blockHash,
                     logIndex: event.logIndex, removed: event.removed, id: event.id}
 
                 logger.info(`[OrderForSale] orderEventDetail: ${JSON.stringify(orderEventDetail)}`)
-                pasarDBService.insertOrderEvent(orderEventDetail);
-                updateOrder(orderInfo._orderId, event.blockNumber);
+                await pasarDBService.insertOrderEvent(orderEventDetail);
+                await updateOrder(orderInfo._orderId, event.blockNumber);
             })
         });
 
@@ -184,7 +196,6 @@ module.exports = {
                         token.tokenIdHex = '0x' + new BigNumber(tokenId).toString(16);
 
                         let tokenCID = result.tokenUri.split(":")[2];
-
                         let response = await fetch(config.ipfsNodeUrl + tokenCID);
                         let data = await response.json();
                         token.kind = data.kind;
@@ -193,6 +204,16 @@ module.exports = {
                         token.name = data.name;
                         token.description = data.description;
                         token.thumbnail = data.thumbnail;
+
+                        if(blockNumber > config.upgradeBlock) {
+                            let extraInfo = await stickerContract.methods.tokenInfo(tokenId).call();
+                            token.didUri = extraInfo.didUri;
+
+                            let creatorCID = extraInfo.didUri.split(":")[2];
+                            let response = await fetch(config.ipfsNodeUrl + creatorCID);
+                            let data = await response.json();
+                            token.did = data.did;
+                        }
 
                         await stickerDBService.replaceToken(token);
                     } catch (e) {
