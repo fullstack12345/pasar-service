@@ -208,7 +208,7 @@ web3Rpc.eth.getBlockNumber().then(currentHeight => {
                     try {
                         let result = await stickerContract.methods.tokenInfo(tokenId).call();
                         let token = {blockNumber, tokenIndex: result.tokenIndex, tokenId, quantity: result.tokenSupply,
-                            royalties:result.royaltyFee, royaltyOwner: result.royaltyOwner,
+                            royalties:result.royaltyFee, royaltyOwner: result.royaltyOwner, holder: result.royaltyOwner,
                             createTime: result.createTime, updateTime: result.updateTime}
 
                         token.tokenIdHex = '0x' + new BigNumber(tokenId).toString(16);
