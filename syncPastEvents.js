@@ -28,19 +28,31 @@ let stickerContract = new web3Rpc.eth.Contract(stickerContractABI, config.sticke
 
 let now = Date.now();
 
-let updateOrder = function (orderId, blockNumber) {
-    pasarContract.methods.getOrderById(orderId).call().then(result => {
+let updateOrder = async function(orderId, blockNumber) {
+    logger.info(`[GetOrderInfo] orderId: ${orderId}   blockNumber: ${blockNumber}`);
+    try {
+        let result = await pasarContract.methods.getOrderById(orderId).call();
         let pasarOrder = {orderId: result.orderId, orderType: result.orderType, orderState: result.orderState,
             tokenId: result.tokenId, amount: result.amount, price: result.price, endTime: result.endTime,
             sellerAddr: result.sellerAddr, buyerAddr: result.buyerAddr, bids: result.bids, lastBidder: result.lastBidder,
             lastBid: result.lastBid, filled: result.filled, royaltyOwner: result.royaltyOwner, royaltyFee: result.royaltyFee,
             createTime: result.createTime, updateTime: result.updateTime, blockNumber}
 
-        pasarDBService.updateOrInsert(pasarOrder);
-    }).catch(error => {
-        console.log(error);
-        console.log(`[OrderForSale] Sync - getOrderById(${orderId}) call error`);
-    })
+        if(result.orderState === "1" && blockNumber > config.upgradeBlock) {
+            let extraInfo = await pasarContract.methods.getOrderExtraById(orderId).call();
+            pasarOrder.platformAddr = extraInfo.platformAddr;
+            pasarOrder.platformFee = extraInfo.platformFee;
+            pasarOrder.sellerUri = extraInfo.sellerUri;
+
+            let tokenCID = extraInfo.sellerUri.split(":")[2];
+            let response = await fetch(config.ipfsNodeUrl + tokenCID);
+            pasarOrder.sellerDid = await response.json();
+        }
+        await pasarDBService.updateOrInsert(pasarOrder);
+    } catch(error) {
+        logger.info(error);
+        logger.info(`[OrderForSale] Sync - getOrderById(${orderId}) call error`);
+    }
 }
 
 let orderForSaleJobCurrent = 7801378,
@@ -64,14 +76,15 @@ web3Rpc.eth.getBlockNumber().then(currentHeight => {
         pasarContractWs.getPastEvents('OrderForSale', {
             fromBlock: orderForSaleJobCurrent, toBlock
         }).then(events => {
-            events.forEach(event => {
+            events.forEach(async event => {
                 let orderInfo = event.returnValues;
                 let orderEventDetail = {orderId: orderInfo._orderId, event: event.event, blockNumber: event.blockNumber,
                     tHash: event.transactionHash, tIndex: event.transactionIndex, blockHash: event.blockHash,
                     logIndex: event.logIndex, removed: event.removed, id: event.id}
 
-                pasarDBService.insertOrderEvent(orderEventDetail);
-                updateOrder(orderInfo._orderId, event.blockNumber);
+                logger.info(`[OrderForSale] orderEventDetail: ${JSON.stringify(orderEventDetail)}`)
+                await pasarDBService.insertOrderEvent(orderEventDetail);
+                await updateOrder(orderInfo._orderId, event.blockNumber);
             })
             orderForSaleJobCurrent = tempBlockNumber + 1;
         }).catch(error => {
@@ -223,6 +236,15 @@ web3Rpc.eth.getBlockNumber().then(currentHeight => {
                         token.name = data.name;
                         token.description = data.description;
                         token.thumbnail = data.thumbnail;
+
+                        if(blockNumber > config.upgradeBlock) {
+                            let extraInfo = await stickerContract.methods.tokenExtraInfo(tokenId).call();
+                            token.didUri = extraInfo.didUri;
+
+                            let creatorCID = extraInfo.didUri.split(":")[2];
+                            let response = await fetch(config.ipfsNodeUrl + creatorCID);
+                            token.did = await response.json();
+                        }
 
                         await stickerDBService.replaceToken(token);
                     } catch (e) {
