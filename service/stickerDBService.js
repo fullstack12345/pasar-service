@@ -95,7 +95,7 @@ module.exports = {
         let client = new MongoClient(config.mongodb, {useNewUrlParser: true, useUnifiedTopology: true});
         try {
             await client.connect();
-            const collection = client.db(config.dbName).collection('pasar_token_event');
+            let collection = client.db(config.dbName).collection('pasar_token_event');
 
             let result = [];
             if(owner) {
@@ -112,7 +112,8 @@ module.exports = {
                 ]).toArray();
             }
             if(creator) {
-                result = await collection.find({royaltyOwner: creator}).project({"_id": 0}).toArray();
+                collection = client.db(config.dbName).collection('pasar_token');
+                result = await collection.find({royaltyOwner: creator}).sort({blockNumber: -1}).project({"_id": 0}).toArray();
             }
 
             return {code: 200, message: 'success', data: {result}};
