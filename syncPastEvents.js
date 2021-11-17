@@ -29,7 +29,7 @@ let stickerContract = new web3Rpc.eth.Contract(stickerContractABI, config.sticke
 let now = Date.now();
 
 let updateOrder = async function(orderId, blockNumber) {
-    logger.info(`[GetOrderInfo] orderId: ${orderId}   blockNumber: ${blockNumber}`);
+    console.log(`[GetOrderInfo] orderId: ${orderId}   blockNumber: ${blockNumber}`);
     try {
         let result = await pasarContract.methods.getOrderById(orderId).call();
         let pasarOrder = {orderId: result.orderId, orderType: result.orderType, orderState: result.orderState,
@@ -50,8 +50,8 @@ let updateOrder = async function(orderId, blockNumber) {
         }
         await pasarDBService.updateOrInsert(pasarOrder);
     } catch(error) {
-        logger.info(error);
-        logger.info(`[OrderForSale] Sync - getOrderById(${orderId}) call error`);
+        console.log(error);
+        console.log(`[OrderForSale] Sync - getOrderById(${orderId}) call error`);
     }
 }
 
@@ -82,7 +82,7 @@ web3Rpc.eth.getBlockNumber().then(currentHeight => {
                     tHash: event.transactionHash, tIndex: event.transactionIndex, blockHash: event.blockHash,
                     logIndex: event.logIndex, removed: event.removed, id: event.id}
 
-                logger.info(`[OrderForSale] orderEventDetail: ${JSON.stringify(orderEventDetail)}`)
+                console.log(`[OrderForSale] orderEventDetail: ${JSON.stringify(orderEventDetail)}`)
                 await pasarDBService.insertOrderEvent(orderEventDetail);
                 await updateOrder(orderInfo._orderId, event.blockNumber);
             })
@@ -245,8 +245,8 @@ web3Rpc.eth.getBlockNumber().then(currentHeight => {
 
                         await stickerDBService.replaceToken(token);
                     } catch (e) {
-                        logger.info(`[TokenInfo] Sync error at ${event.blockNumber} ${tokenId}`);
-                        logger.info(e);
+                        console.log(`[TokenInfo] Sync error at ${event.blockNumber} ${tokenId}`);
+                        console.log(e);
                     }
                 } else {
                     await stickerDBService.updateToken(tokenId, to, timestamp);
