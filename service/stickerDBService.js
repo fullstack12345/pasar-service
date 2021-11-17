@@ -155,5 +155,18 @@ module.exports = {
         } finally {
             await mongoClient.close();
         }
+    },
+
+    tokenTrans: async function(tokenId) {
+        let mongoClient = new MongoClient(config.mongodb, {useNewUrlParser: true, useUnifiedTopology: true});
+        try {
+            await mongoClient.connect();
+            const collection = mongoClient.db(config.dbName).collection('pasar_token_event');
+            return await collection.find({tokenId}).toArray;
+        } catch (err) {
+            logger.error(err);
+        } finally {
+            await mongoClient.close();
+        }
     }
 }
