@@ -168,7 +168,6 @@ module.exports = {
                 logger.info("[TokenInfo] Sync Ending ...");
                 isGetTokenInfoJobRun = false
             }).on("data", async function (event) {
-
                 let from = event.returnValues._from;
                 let to = event.returnValues._to;
                 let tokenId = event.returnValues._id;
@@ -181,10 +180,7 @@ module.exports = {
 
                 if(to === burnAddress) {
                     await stickerDBService.burnToken(tokenId);
-                    return;
-                }
-
-                if(from === burnAddress) {
+                } else if(from === burnAddress) {
                     try {
                         let result = await stickerContract.methods.tokenInfo(tokenId).call();
                         let token = {blockNumber, tokenIndex: result.tokenIndex, tokenId, quantity: result.tokenSupply,
@@ -202,6 +198,7 @@ module.exports = {
                         token.name = data.name;
                         token.description = data.description;
                         token.thumbnail = data.thumbnail;
+                        token.size = data.size;
 
                         if(blockNumber > config.upgradeBlock) {
                             let extraInfo = await stickerContract.methods.tokenExtraInfo(tokenId).call();
@@ -217,8 +214,9 @@ module.exports = {
                         logger.info(`[TokenInfo] Sync error at ${event.blockNumber} ${tokenId}`);
                         logger.info(e);
                     }
+                } else {
+                    await stickerDBService.updateToken(tokenId, to, timestamp);
                 }
-                await stickerDBService.updateToken(tokenId, to, timestamp);
             })
         });
 

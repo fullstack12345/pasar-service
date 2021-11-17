@@ -214,10 +214,7 @@ web3Rpc.eth.getBlockNumber().then(currentHeight => {
 
                 if(to === burnAddress) {
                     await stickerDBService.burnToken(tokenId);
-                    return;
-                }
-
-                if(from === burnAddress) {
+                } else if(from === burnAddress) {
                     try {
                         let result = await stickerContract.methods.tokenInfo(tokenId).call();
                         let token = {blockNumber, tokenIndex: result.tokenIndex, tokenId, quantity: result.tokenSupply,
@@ -227,7 +224,6 @@ web3Rpc.eth.getBlockNumber().then(currentHeight => {
                         token.tokenIdHex = '0x' + new BigNumber(tokenId).toString(16);
 
                         let tokenCID = result.tokenUri.split(":")[2];
-
                         let response = await fetch(config.ipfsNodeUrl + tokenCID);
                         let data = await response.json();
                         token.kind = data.kind;
@@ -236,6 +232,7 @@ web3Rpc.eth.getBlockNumber().then(currentHeight => {
                         token.name = data.name;
                         token.description = data.description;
                         token.thumbnail = data.thumbnail;
+                        token.size = data.size;
 
                         if(blockNumber > config.upgradeBlock) {
                             let extraInfo = await stickerContract.methods.tokenExtraInfo(tokenId).call();
@@ -251,8 +248,9 @@ web3Rpc.eth.getBlockNumber().then(currentHeight => {
                         logger.info(`[TokenInfo] Sync error at ${event.blockNumber} ${tokenId}`);
                         logger.info(e);
                     }
+                } else {
+                    await stickerDBService.updateToken(tokenId, to, timestamp);
                 }
-                await stickerDBService.updateToken(tokenId, to, timestamp);
             })
             tokenInfoSyncJobCurrent = tempBlockNumber + 1;
         }).catch(error => {
