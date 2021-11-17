@@ -22,25 +22,6 @@ module.exports = {
         }
     },
 
-    getLastStickerSyncHeight: async function () {
-        let mongoClient = new MongoClient(config.mongodb, {useNewUrlParser: true, useUnifiedTopology: true});
-        try {
-            await mongoClient.connect();
-            const collection = mongoClient.db(config.dbName).collection('pasar_token');
-            let doc = await collection.findOne({}, {sort:{blockNumber: -1}});
-            if(doc) {
-                return doc.blockNumber
-            } else {
-                return config.stickerContractDeploy - 1;
-            }
-        } catch (err) {
-            logger.error(err);
-            throw new Error();
-        } finally {
-            await mongoClient.close();
-        }
-    },
-
     updateOrInsert: async function (pasarOrder) {
         let {orderId, ...rest} = pasarOrder;
         let mongoClient = new MongoClient(config.mongodb, {useNewUrlParser: true, useUnifiedTopology: true});

@@ -157,7 +157,7 @@ module.exports = {
 
         let tokenInfoSyncJobId = schedule.scheduleJob(new Date(now + 60 * 1000), async () => {
             const burnAddress = '0x0000000000000000000000000000000000000000';
-            let lastHeight = await pasarDBService.getLastStickerSyncHeight();
+            let lastHeight = await stickerDBService.getLastStickerSyncHeight();
             isGetTokenInfoJobRun = true;
             logger.info(`[TokenInfo] Sync Starting ... from block ${lastHeight + 1}`)
 
@@ -172,10 +172,11 @@ module.exports = {
                 let to = event.returnValues._to;
                 let tokenId = event.returnValues._id;
                 let value = event.returnValues._value;
+                let memo = event.returnValues._memo ? event.returnValues._memo : "";
                 let blockNumber = event.blockNumber;
                 let timestamp = (await web3Rpc.eth.getBlock(blockNumber)).timestamp;
 
-                let transferEvent = {tokenId, blockNumber, timestamp, from, to, value}
+                let transferEvent = {tokenId, blockNumber, timestamp, from, to, value, memo}
                 await stickerDBService.addEvent(transferEvent);
 
                 if(to === burnAddress) {
