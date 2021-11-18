@@ -162,7 +162,7 @@ module.exports = {
         try {
             await mongoClient.connect();
             const collection = mongoClient.db(config.dbName).collection('pasar_token_event');
-            return await collection.find({tokenId}).sort({blockNumber: -1}).toArray;
+            return await collection.find({tokenId}).sort({blockNumber: -1}).toArray();
         } catch (err) {
             logger.error(err);
         } finally {

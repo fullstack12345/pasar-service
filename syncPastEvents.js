@@ -272,8 +272,10 @@ web3Rpc.eth.getBlockNumber().then(currentHeight => {
      */
     schedule.scheduleJob({start: new Date(now + 2 * 60 * 1000), rule: '40 * * * * *'}, async () => {
         if(tokenInfoMemoSyncJobCurrent <= config.upgradeBlock) {
-            tokenInfoMemoSyncJobCurrent = tokenInfoMemoSyncJobCurrent + step + 1;
-            console.log(`[TokenInfoMemo] Sync have not start yet!`)
+            const tempBlockNumber = tokenInfoMemoSyncJobCurrent + step
+            const toBlock = Math.min(tempBlockNumber, currentHeight, config.upgradeBlock);
+            tokenInfoMemoSyncJobCurrent = toBlock + 1;
+            console.log(`[TokenInfoMemo] ${tokenInfoMemoSyncJobCurrent} ~ ${toBlock} Sync have not start yet!`)
             return;
         }
 
@@ -285,10 +287,10 @@ web3Rpc.eth.getBlockNumber().then(currentHeight => {
         const tempBlockNumber = tokenInfoMemoSyncJobCurrent + step
         const toBlock = Math.min(tempBlockNumber, currentHeight);
 
-        console.log(`[TokenInfoMemo] Sync ${tokenInfoSyncJobCurrent} ~ ${toBlock} ...`)
+        console.log(`[TokenInfoMemo] Sync ${tokenInfoMemoSyncJobCurrent} ~ ${toBlock} ...`)
 
         stickerContractWs.getPastEvents('TransferSingleWithMemo', {
-            fromBlock: tokenInfoSyncJobCurrent, toBlock
+            fromBlock: tokenInfoMemoSyncJobCurrent, toBlock
         }).then(events => {
             dealTokenInfoEvents(events);
             tokenInfoMemoSyncJobCurrent = toBlock + 1;
