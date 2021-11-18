@@ -150,7 +150,7 @@ web3Rpc.eth.getBlockNumber().then(currentHeight => {
         })
     });
 
-    schedule.scheduleJob({start: new Date(now + 5 * 60 * 1000), rule: '10 * * * * *'}, async () => {
+    schedule.scheduleJob({start: new Date(now + 3 * 60 * 1000), rule: '10 * * * * *'}, async () => {
         if(orderFilledJobCurrent > currentHeight) {
             console.log(`[OrderFilled] Sync ${orderFilledJobCurrent} finished`)
             return;
@@ -180,7 +180,7 @@ web3Rpc.eth.getBlockNumber().then(currentHeight => {
         })
     });
 
-    schedule.scheduleJob({start: new Date(now + 5 * 60 * 1000), rule: '20 * * * * *'}, async () => {
+    schedule.scheduleJob({start: new Date(now + 4 * 60 * 1000), rule: '20 * * * * *'}, async () => {
         if(orderCanceledJobCurrent > currentHeight) {
             console.log(`[OrderCanceled] Sync ${orderCanceledJobCurrent} finished`)
             return;
@@ -211,7 +211,7 @@ web3Rpc.eth.getBlockNumber().then(currentHeight => {
     });
 
 
-    schedule.scheduleJob({start: new Date(now + 5 * 60 * 1000), rule: '30 * * * * *'}, async () => {
+    schedule.scheduleJob({start: new Date(now + 4 * 60 * 1000), rule: '30 * * * * *'}, async () => {
         if(orderPriceChangedJobCurrent > currentHeight) {
             console.log(`[OrderPriceChanged] Sync ${orderPriceChangedJobCurrent} finished`)
             return;
@@ -270,8 +270,8 @@ web3Rpc.eth.getBlockNumber().then(currentHeight => {
     /**
      * transferSingleWithMemo event
      */
-    schedule.scheduleJob({start: new Date(now + 2 * 60 * 1000), rule: '40 * * * * *'}, async () => {
-        if(tokenInfoMemoSyncJobCurrent <= config.upgradeBlock) {
+    schedule.scheduleJob({start: new Date(now + 3 * 60 * 1000), rule: '40 * * * * *'}, async () => {
+        if(tokenInfoMemoSyncJobCurrent <= config.upgradeBlock && tokenInfoMemoSyncJobCurrent <= currentHeight) {
             const tempBlockNumber = tokenInfoMemoSyncJobCurrent + step
             const toBlock = Math.min(tempBlockNumber, currentHeight, config.upgradeBlock);
             console.log(`[TokenInfoMemo] ${tokenInfoMemoSyncJobCurrent} ~ ${toBlock} Sync have not start yet!`)
