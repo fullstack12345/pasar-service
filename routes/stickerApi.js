@@ -76,7 +76,7 @@ router.get('/tokenTrans', function(req, res) {
         return;
     }
 
-    if(tokenId.startsWith('0x') && keyword.length > 42) {
+    if(tokenId.startsWith('0x') && tokenId.length > 42) {
         tokenId = new BigNumber(tokenId).toFormat({prefix:""});
     }
 
