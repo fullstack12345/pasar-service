@@ -76,6 +76,10 @@ router.get('/tokenTrans', function(req, res) {
         return;
     }
 
+    if(tokenId.startsWith('0x') && keyword.length > 42) {
+        tokenId = new BigNumber(tokenId).toFormat({prefix:""});
+    }
+
     stickerDBService.tokenTrans(tokenId).then(result => {
         res.json(result);
     }).catch(error => {
