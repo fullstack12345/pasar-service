@@ -274,8 +274,8 @@ web3Rpc.eth.getBlockNumber().then(currentHeight => {
         if(tokenInfoMemoSyncJobCurrent <= config.upgradeBlock) {
             const tempBlockNumber = tokenInfoMemoSyncJobCurrent + step
             const toBlock = Math.min(tempBlockNumber, currentHeight, config.upgradeBlock);
-            tokenInfoMemoSyncJobCurrent = toBlock + 1;
             console.log(`[TokenInfoMemo] ${tokenInfoMemoSyncJobCurrent} ~ ${toBlock} Sync have not start yet!`)
+            tokenInfoMemoSyncJobCurrent = toBlock + 1;
             return;
         }
 

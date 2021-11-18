@@ -68,7 +68,8 @@ module.exports = {
                         createTime: 1, updateTime: 1, lastBid: 1,sellerDid: 1, asset: "$token.asset", name: "$token.name",
                         description: "$token.description", kind: "$token.kind", type: "$token.type", size: "$token.size",
                         royalties: "$token.royalties",royaltyOwner: "$token.royaltyOwner", quantity: "$token.quantity",
-                        thumbnail: "$token.thumbnail", tokenCreateTime: "$token.createTime", tokenUpdateTime: "$token.updateTime"}},
+                        tokenDid: "$token.did", thumbnail: "$token.thumbnail", tokenCreateTime: "$token.createTime",
+                        tokenUpdateTime: "$token.updateTime"}},
                 { $sort: {blockNumber: sort}},
                 { $skip: (pageNum - 1) * pageSize },
                 { $limit: pageSize }
