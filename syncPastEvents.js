@@ -111,12 +111,12 @@ let dealTokenInfoEvents = function (events) {
     })
 }
 
-let orderForSaleJobCurrent = 7801378,
-    orderFilledJobCurrent = 7801378,
-    orderCanceledJobCurrent = 7801378,
-    orderPriceChangedJobCurrent = 7801378,
-    tokenInfoSyncJobCurrent = 7744408,
-    tokenInfoMemoSyncJobCurrent = 7744408;
+let orderForSaleJobCurrent = config.pasarContractDeploy,
+    orderFilledJobCurrent = config.pasarContractDeploy,
+    orderCanceledJobCurrent = config.pasarContractDeploy,
+    orderPriceChangedJobCurrent = config.pasarContractDeploy,
+    tokenInfoSyncJobCurrent = config.stickerContractDeploy,
+    tokenInfoMemoSyncJobCurrent = config.stickerContractDeploy;
 
 const step = 5000;
 web3Rpc.eth.getBlockNumber().then(currentHeight => {
