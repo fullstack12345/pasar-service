@@ -4,6 +4,12 @@ module.exports = {
     dbUser: '',
     dbPass: '',
 
+    mailHost: '',
+    mailPort: 465,
+    mailUser: '',
+    mailPass: '',
+    mailFrom: '',
+
     escWsUrl: 'wss://api-testnet.elastos.io/eth-ws',
     escRpcUrl: 'https://api-testnet.elastos.io/eth',
     pasarContract: '0x2652d10A5e525959F7120b56f2D7a9cD0f6ee087',
