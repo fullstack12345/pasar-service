@@ -58,63 +58,6 @@ let updateOrder = async function(orderId, blockNumber) {
     }
 }
 
-let dealTokenInfoEvents = function (events) {
-    events.forEach(async event => {
-        let from = event.returnValues._from;
-        let to = event.returnValues._to;
-        let tokenId = event.returnValues._id;
-        let value = event.returnValues._value;
-        let memo = event.returnValues._memo ? event.returnValues._memo : "";
-        let blockNumber = event.blockNumber;
-        let timestamp = (await web3Rpc.eth.getBlock(blockNumber)).timestamp;
-
-        let transferEvent = {tokenId, blockNumber, timestamp, from, to, value, memo};
-        await stickerDBService.addEvent(transferEvent);
-
-        if(to === burnAddress) {
-            await stickerDBService.burnToken(tokenId);
-        } else if(from === burnAddress) {
-            try {
-                let result = await stickerContract.methods.tokenInfo(tokenId).call();
-                let token = {blockNumber, tokenIndex: result.tokenIndex, tokenId, quantity: result.tokenSupply,
-                    royalties:result.royaltyFee, royaltyOwner: result.royaltyOwner, holder: result.royaltyOwner,
-                    createTime: result.createTime, updateTime: result.updateTime}
-
-                token.tokenIdHex = '0x' + new BigNumber(tokenId).toString(16);
-
-                let tokenCID = result.tokenUri.split(":")[2];
-                let response = await fetch(config.ipfsNodeUrl + tokenCID);
-                let data = await response.json();
-                token.kind = data.kind;
-                token.type = data.type;
-                token.asset = data.image;
-                token.name = data.name;
-                token.description = data.description;
-                token.thumbnail = data.thumbnail;
-                token.size = data.size;
-                token.adult = data.adult ? data.adult : false;
-
-                if(blockNumber > config.upgradeBlock) {
-                    let extraInfo = await stickerContract.methods.tokenExtraInfo(tokenId).call();
-                    token.didUri = extraInfo.didUri;
-
-                    let creatorCID = extraInfo.didUri.split(":")[2];
-                    let response = await fetch(config.ipfsNodeUrl + creatorCID);
-                    token.did = await response.json();
-
-                    await pasarDBService.replaceDid({address: result.royaltyOwner, did: token.did});
-                }
-                await stickerDBService.replaceToken(token);
-            } catch (e) {
-                console.log(`[TokenInfo] Sync error at ${event.blockNumber} ${tokenId}`);
-                console.log(e);
-            }
-        } else {
-            await stickerDBService.updateToken(tokenId, to, timestamp);
-        }
-    })
-}
-
 let orderForSaleJobCurrent = config.pasarContractDeploy,
     orderFilledJobCurrent = config.pasarContractDeploy,
     orderCanceledJobCurrent = config.pasarContractDeploy,
@@ -250,20 +193,77 @@ web3Rpc.eth.getBlockNumber().then(currentHeight => {
      * transferSingle event
      */
     schedule.scheduleJob({start: new Date(now + 2 * 60 * 1000), rule: '40 * * * * *'}, async () => {
-        if(tokenInfoSyncJobCurrent > currentHeight || tokenInfoSyncJobCurrent > config.upgradeBlock) {
+        if(tokenInfoSyncJobCurrent > currentHeight) {
             console.log(`[TokenInfo] Sync ${tokenInfoSyncJobCurrent} finished`)
             return;
         }
 
         const tempBlockNumber = tokenInfoSyncJobCurrent + step
-        const toBlock = Math.min(tempBlockNumber, currentHeight, config.upgradeBlock);
+        const toBlock = Math.min(tempBlockNumber, currentHeight);
 
         console.log(`[TokenInfo] Sync ${tokenInfoSyncJobCurrent} ~ ${toBlock} ...`)
 
         stickerContractWs.getPastEvents('TransferSingle', {
             fromBlock: tokenInfoSyncJobCurrent, toBlock
         }).then(events => {
-            dealTokenInfoEvents(events);
+            events.forEach(async event => {
+                let blockNumber = event.blockNumber;
+                let from = event.returnValues._from;
+                let to = event.returnValues._to;
+
+                if(from !== burnAddress && to !== burnAddress && blockNumber > config.upgradeBlock) {
+                    return;
+                }
+
+                let tokenId = event.returnValues._id;
+                let value = event.returnValues._value;
+                let timestamp = (await web3Rpc.eth.getBlock(blockNumber)).timestamp;
+
+                let transferEvent = {tokenId, blockNumber, timestamp, from, to, value};
+                await stickerDBService.addEvent(transferEvent);
+
+                if(to === burnAddress) {
+                    await stickerDBService.burnToken(tokenId);
+                } else if(from === burnAddress) {
+                    try {
+                        let result = await stickerContract.methods.tokenInfo(tokenId).call();
+                        let token = {blockNumber, tokenIndex: result.tokenIndex, tokenId, quantity: result.tokenSupply,
+                            royalties:result.royaltyFee, royaltyOwner: result.royaltyOwner, holder: result.royaltyOwner,
+                            createTime: result.createTime, updateTime: result.updateTime}
+
+                        token.tokenIdHex = '0x' + new BigNumber(tokenId).toString(16);
+
+                        let tokenCID = result.tokenUri.split(":")[2];
+                        let response = await fetch(config.ipfsNodeUrl + tokenCID);
+                        let data = await response.json();
+                        token.kind = data.kind;
+                        token.type = data.type;
+                        token.asset = data.image;
+                        token.name = data.name;
+                        token.description = data.description;
+                        token.thumbnail = data.thumbnail;
+                        token.size = data.size;
+                        token.adult = data.adult ? data.adult : false;
+
+                        if(blockNumber > config.upgradeBlock) {
+                            let extraInfo = await stickerContract.methods.tokenExtraInfo(tokenId).call();
+                            token.didUri = extraInfo.didUri;
+
+                            let creatorCID = extraInfo.didUri.split(":")[2];
+                            let response = await fetch(config.ipfsNodeUrl + creatorCID);
+                            token.did = await response.json();
+
+                            await pasarDBService.replaceDid({address: result.royaltyOwner, did: token.did});
+                        }
+                        await stickerDBService.replaceToken(token);
+                    } catch (e) {
+                        console.log(`[TokenInfo] Sync error at ${event.blockNumber} ${tokenId}`);
+                        console.log(e);
+                    }
+                } else {
+                    await stickerDBService.updateToken(tokenId, to, timestamp);
+                }
+            })
             tokenInfoSyncJobCurrent = toBlock + 1;
         }).catch(error => {
             console.log(error);
@@ -296,7 +296,19 @@ web3Rpc.eth.getBlockNumber().then(currentHeight => {
         stickerContractWs.getPastEvents('TransferSingleWithMemo', {
             fromBlock: tokenInfoMemoSyncJobCurrent, toBlock
         }).then(events => {
-            dealTokenInfoEvents(events);
+            events.forEach(async event => {
+                let from = event.returnValues._from;
+                let to = event.returnValues._to;
+                let tokenId = event.returnValues._id;
+                let value = event.returnValues._value;
+                let memo = event.returnValues._memo ? event.returnValues._memo : "";
+                let blockNumber = event.blockNumber;
+                let timestamp = (await web3Rpc.eth.getBlock(blockNumber)).timestamp;
+
+                let transferEvent = {tokenId, blockNumber, timestamp, from, to, value, memo};
+                await stickerDBService.addEvent(transferEvent);
+                await stickerDBService.updateToken(tokenId, to, timestamp);
+            })
             tokenInfoMemoSyncJobCurrent = toBlock + 1;
         }).catch(error => {
             console.log(error);
