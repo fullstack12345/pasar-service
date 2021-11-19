@@ -41,7 +41,7 @@ module.exports = {
         let mongoClient = new MongoClient(config.mongodb, {useNewUrlParser: true, useUnifiedTopology: true});
         try {
             await mongoClient.connect();
-            const collection = mongoClient.db(config.dbName).collection('pasar_order');
+            const collection = mongoClient.db(config.dbName).collection('pasar_address_did');
             await collection.updateOne({address}, {$set: {did}}, {upsert: true});
         } catch (err) {
             logger.error(err);
