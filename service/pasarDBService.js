@@ -37,6 +37,20 @@ module.exports = {
         }
     },
 
+    replaceDid: async function({address, did}) {
+        let mongoClient = new MongoClient(config.mongodb, {useNewUrlParser: true, useUnifiedTopology: true});
+        try {
+            await mongoClient.connect();
+            const collection = mongoClient.db(config.dbName).collection('pasar_order');
+            await collection.updateOne({address}, {$set: {did}}, {upsert: true});
+        } catch (err) {
+            logger.error(err);
+            throw new Error();
+        } finally {
+            await mongoClient.close();
+        }
+    },
+
     insertOrderEvent: async function (orderEventDetail) {
         let mongoClient = new MongoClient(config.mongodb, {useNewUrlParser: true, useUnifiedTopology: true});
         try {
@@ -69,7 +83,7 @@ module.exports = {
                         description: "$token.description", kind: "$token.kind", type: "$token.type", size: "$token.size",
                         royalties: "$token.royalties",royaltyOwner: "$token.royaltyOwner", quantity: "$token.quantity",
                         tokenDid: "$token.did", thumbnail: "$token.thumbnail", tokenCreateTime: "$token.createTime",
-                        tokenUpdateTime: "$token.updateTime"}},
+                        tokenUpdateTime: "$token.updateTime", adult: "$token.adult"}},
                 { $sort: {blockNumber: sort}},
                 { $skip: (pageNum - 1) * pageSize },
                 { $limit: pageSize }
@@ -83,8 +97,8 @@ module.exports = {
             }
 
             let total = await collection.find(match).count();
-
             let result = await collection.aggregate(pipeline).toArray();
+
             return {code: 200, message: 'success', data: {total, result}};
         } catch (err) {
             logger.error(err);

@@ -24,11 +24,11 @@ async function sendMail(subject, content, recipients, html) {
 
     try {
         let info = await transporter.sendMail(mailOptions);
+        console.log("Message sent: %s", info.messageId);
+        console.log("Preview URL: %s", nodemailer.getTestMessageUrl(info));
     } catch(e) {
         console.log(e);
     }
-    console.log("Message sent: %s", info.messageId);
-    console.log("Preview URL: %s", nodemailer.getTestMessageUrl(info));
 }
 
 module.exports = sendMail;

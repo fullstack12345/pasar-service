@@ -57,6 +57,8 @@ module.exports = {
                     let tokenCID = extraInfo.sellerUri.split(":")[2];
                     let response = await fetch(config.ipfsNodeUrl + tokenCID);
                     pasarOrder.sellerDid = await response.json();
+
+                    await pasarDBService.replaceDid({address: result.sellerAddr, did: pasarOrder.sellerDid});
                 }
                 await pasarDBService.updateOrInsert(pasarOrder);
             } catch(error) {
@@ -200,6 +202,7 @@ module.exports = {
                         token.description = data.description;
                         token.thumbnail = data.thumbnail;
                         token.size = data.size;
+                        token.adult = data.adult ? data.adult : false;
 
                         if(blockNumber > config.upgradeBlock) {
                             let extraInfo = await stickerContract.methods.tokenExtraInfo(tokenId).call();
@@ -208,6 +211,8 @@ module.exports = {
                             let creatorCID = extraInfo.didUri.split(":")[2];
                             let response = await fetch(config.ipfsNodeUrl + creatorCID);
                             token.did = await response.json();
+
+                            await pasarDBService.replaceDid({address: result.royaltyOwner, did: token.did});
                         }
 
                         await stickerDBService.replaceToken(token);
