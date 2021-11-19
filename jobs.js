@@ -99,6 +99,7 @@ module.exports = {
                     let response = await fetch(config.ipfsNodeUrl + creatorCID);
                     token.did = await response.json();
 
+                    logger.info(`[TokenInfo] New token info: ${token}`)
                     await pasarDBService.replaceDid({address: result.royaltyOwner, did: token.did});
                 }
 
@@ -225,6 +226,7 @@ module.exports = {
 
                 let transferEvent = {tokenId, blockNumber, timestamp, from, to, value}
                 await stickerDBService.addEvent(transferEvent);
+                logger.info(`[TokenInfo] tokenEvent: ${transferEvent}`)
 
                 if(to === burnAddress) {
                     await stickerDBService.burnToken(tokenId);
@@ -258,6 +260,7 @@ module.exports = {
 
                 let transferEvent = {tokenId, blockNumber, timestamp, from, to, value, memo}
                 await stickerDBService.addEvent(transferEvent);
+                logger.info(`[TokenInfoWithMemo] tokenEvent: ${transferEvent}`)
                 await stickerDBService.updateToken(tokenId, to, timestamp);
             })
         });
