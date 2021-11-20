@@ -42,7 +42,6 @@ module.exports = {
         recipients.push('lifayi2008@163.com');
 
         async function updateOrder(orderId, blockNumber) {
-            logger.info(`[GetOrderInfo] orderId: ${orderId}   blockNumber: ${blockNumber}`);
             try {
                 let result = await pasarContract.methods.getOrderById(orderId).call();
                 let pasarOrder = {orderId: result.orderId, orderType: result.orderType, orderState: result.orderState,
@@ -99,7 +98,7 @@ module.exports = {
                     let response = await fetch(config.ipfsNodeUrl + creatorCID);
                     token.did = await response.json();
 
-                    logger.info(`[TokenInfo] New token info: ${token}`)
+                    logger.info(`[TokenInfo] New token info: ${JSON.stringify(token)}`)
                     await pasarDBService.replaceDid({address: result.royaltyOwner, did: token.did});
                 }
 
@@ -144,15 +143,15 @@ module.exports = {
             }).on("error", function (error) {
                 logger.info(error);
                 logger.info("[OrderFilled] Sync Ending ...");
-            }).on("data", function (event) {
+            }).on("data", async function (event) {
                 let orderInfo = event.returnValues;
                 let orderEventDetail = {orderId: orderInfo._orderId, event: event.event, blockNumber: event.blockNumber,
                     tHash: event.transactionHash, tIndex: event.transactionIndex, blockHash: event.blockHash,
                     logIndex: event.logIndex, removed: event.removed, id: event.id}
 
                 logger.info(`[OrderFilled] orderEventDetail: ${JSON.stringify(orderEventDetail)}`)
-                pasarDBService.insertOrderEvent(orderEventDetail);
-                updateOrder(orderInfo._orderId, event.blockNumber);
+                await pasarDBService.insertOrderEvent(orderEventDetail);
+                await updateOrder(orderInfo._orderId, event.blockNumber);
             })
         });
 
@@ -166,15 +165,15 @@ module.exports = {
             }).on("error", function (error) {
                 logger.info(error);
                 logger.info("[OrderCanceled] Sync Ending ...");
-            }).on("data", function (event) {
+            }).on("data", async function (event) {
                 let orderInfo = event.returnValues;
                 let orderEventDetail = {orderId: orderInfo._orderId, event: event.event, blockNumber: event.blockNumber,
                     tHash: event.transactionHash, tIndex: event.transactionIndex, blockHash: event.blockHash,
                     logIndex: event.logIndex, removed: event.removed, id: event.id};
 
                 logger.info(`[OrderCanceled] orderEventDetail: ${JSON.stringify(orderEventDetail)}`)
-                pasarDBService.insertOrderEvent(orderEventDetail);
-                updateOrder(orderInfo._orderId, event.blockNumber);
+                await pasarDBService.insertOrderEvent(orderEventDetail);
+                await updateOrder(orderInfo._orderId, event.blockNumber);
             })
         });
 
@@ -188,15 +187,15 @@ module.exports = {
             }).on("error", function (error) {
                 logger.info(error);
                 logger.info("[OrderPriceChanged] Sync Ending ...");
-            }).on("data", function (event) {
+            }).on("data", async function (event) {
                 let orderInfo = event.returnValues;
                 let orderEventDetail = {orderId: orderInfo._orderId, event: event.event, blockNumber: event.blockNumber,
                     tHash: event.transactionHash, tIndex: event.transactionIndex, blockHash: event.blockHash,
                     logIndex: event.logIndex, removed: event.removed, id: event.id}
 
                 logger.info(`[OrderPriceChanged] orderEventDetail: ${JSON.stringify(orderEventDetail)}`)
-                pasarDBService.insertOrderEvent(orderEventDetail);
-                updateOrder(orderInfo._orderId, event.blockNumber);
+                await pasarDBService.insertOrderEvent(orderEventDetail);
+                await updateOrder(orderInfo._orderId, event.blockNumber);
             })
         });
 
@@ -260,7 +259,7 @@ module.exports = {
 
                 let transferEvent = {tokenId, blockNumber, timestamp, from, to, value, memo}
                 await stickerDBService.addEvent(transferEvent);
-                logger.info(`[TokenInfoWithMemo] tokenEvent: ${transferEvent}`)
+                logger.info(`[TokenInfoWithMemo] transferToken: ${transferEvent}`)
                 await stickerDBService.updateToken(tokenId, to, timestamp);
             })
         });
