@@ -4,6 +4,12 @@ module.exports = {
     dbUser: '',
     dbPass: '',
 
+    mailHost: 'smtp.qq.com',
+    mailPort: 465,
+    mailUser: '445222754',
+    mailPass: '',
+    mailFrom: '445222754@qq.com',
+
     escWsUrl: 'wss://api.elastos.io/eth-ws',
     escRpcUrl: 'https://api.elastos.io/eth',
     pasarContract: '0x02E8AD0687D583e2F6A7e5b82144025f30e26aA0',
@@ -13,5 +19,6 @@ module.exports = {
 
     ipfsNodeUrl: 'https://ipfs.trinity-feeds.app/ipfs/',
 
-    serviceName: ''
+    serviceName: 'default',
+    upgradeBlock: 9999999
 }

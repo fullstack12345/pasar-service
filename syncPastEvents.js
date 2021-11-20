@@ -27,27 +27,43 @@ let pasarContract = new web3Rpc.eth.Contract(pasarContractABI, config.pasarContr
 let stickerContract = new web3Rpc.eth.Contract(stickerContractABI, config.stickerContract);
 
 let now = Date.now();
+const burnAddress = '0x0000000000000000000000000000000000000000';
 
-let updateOrder = function (orderId, blockNumber) {
-    pasarContract.methods.getOrderById(orderId).call().then(result => {
+let updateOrder = async function(orderId, blockNumber) {
+    console.log(`[GetOrderInfo] orderId: ${orderId}   blockNumber: ${blockNumber}`);
+    try {
+        let result = await pasarContract.methods.getOrderById(orderId).call();
         let pasarOrder = {orderId: result.orderId, orderType: result.orderType, orderState: result.orderState,
             tokenId: result.tokenId, amount: result.amount, price: result.price, endTime: result.endTime,
             sellerAddr: result.sellerAddr, buyerAddr: result.buyerAddr, bids: result.bids, lastBidder: result.lastBidder,
             lastBid: result.lastBid, filled: result.filled, royaltyOwner: result.royaltyOwner, royaltyFee: result.royaltyFee,
             createTime: result.createTime, updateTime: result.updateTime, blockNumber}
 
-        pasarDBService.updateOrInsert(pasarOrder);
-    }).catch(error => {
+        if(result.orderState === "1" && blockNumber > config.upgradeBlock) {
+            let extraInfo = await pasarContract.methods.getOrderExtraById(orderId).call();
+            pasarOrder.platformAddr = extraInfo.platformAddr;
+            pasarOrder.platformFee = extraInfo.platformFee;
+            pasarOrder.sellerUri = extraInfo.sellerUri;
+
+            let tokenCID = extraInfo.sellerUri.split(":")[2];
+            let response = await fetch(config.ipfsNodeUrl + tokenCID);
+            pasarOrder.sellerDid = await response.json();
+
+            await pasarDBService.replaceDid({address: result.sellerAddr, did: pasarOrder.sellerDid});
+        }
+        await pasarDBService.updateOrInsert(pasarOrder);
+    } catch(error) {
         console.log(error);
         console.log(`[OrderForSale] Sync - getOrderById(${orderId}) call error`);
-    })
+    }
 }
 
-let orderForSaleJobCurrent = 7801378,
-    orderFilledJobCurrent = 7801378,
-    orderCanceledJobCurrent = 7801378,
-    orderPriceChangedJobCurrent = 7801378,
-    tokenInfoSyncJobCurrent = 7744408;
+let orderForSaleJobCurrent = config.pasarContractDeploy,
+    orderFilledJobCurrent = config.pasarContractDeploy,
+    orderCanceledJobCurrent = config.pasarContractDeploy,
+    orderPriceChangedJobCurrent = config.pasarContractDeploy,
+    tokenInfoSyncJobCurrent = config.stickerContractDeploy,
+    tokenInfoMemoSyncJobCurrent = config.stickerContractDeploy;
 
 const step = 5000;
 web3Rpc.eth.getBlockNumber().then(currentHeight => {
@@ -64,23 +80,24 @@ web3Rpc.eth.getBlockNumber().then(currentHeight => {
         pasarContractWs.getPastEvents('OrderForSale', {
             fromBlock: orderForSaleJobCurrent, toBlock
         }).then(events => {
-            events.forEach(event => {
+            events.forEach(async event => {
                 let orderInfo = event.returnValues;
                 let orderEventDetail = {orderId: orderInfo._orderId, event: event.event, blockNumber: event.blockNumber,
                     tHash: event.transactionHash, tIndex: event.transactionIndex, blockHash: event.blockHash,
                     logIndex: event.logIndex, removed: event.removed, id: event.id}
 
-                pasarDBService.insertOrderEvent(orderEventDetail);
-                updateOrder(orderInfo._orderId, event.blockNumber);
+                console.log(`[OrderForSale] orderEventDetail: ${JSON.stringify(orderEventDetail)}`)
+                await pasarDBService.insertOrderEvent(orderEventDetail);
+                await updateOrder(orderInfo._orderId, event.blockNumber);
             })
-            orderForSaleJobCurrent = tempBlockNumber + 1;
+            orderForSaleJobCurrent = toBlock + 1;
         }).catch(error => {
             console.log(error);
             console.log("[OrderForSale] Sync Ending ...")
         })
     });
 
-    schedule.scheduleJob({start: new Date(now + 5 * 60 * 1000), rule: '10 * * * * *'}, async () => {
+    schedule.scheduleJob({start: new Date(now + 3 * 60 * 1000), rule: '10 * * * * *'}, async () => {
         if(orderFilledJobCurrent > currentHeight) {
             console.log(`[OrderFilled] Sync ${orderFilledJobCurrent} finished`)
             return;
@@ -103,14 +120,14 @@ web3Rpc.eth.getBlockNumber().then(currentHeight => {
                 pasarDBService.insertOrderEvent(orderEventDetail);
                 updateOrder(orderInfo._orderId, event.blockNumber);
             })
-            orderFilledJobCurrent = tempBlockNumber + 1;
+            orderFilledJobCurrent = toBlock + 1;
         }).catch( error => {
             console.log(error);
             console.log("[OrderFilled] Sync Ending ...");
         })
     });
 
-    schedule.scheduleJob({start: new Date(now + 5 * 60 * 1000), rule: '20 * * * * *'}, async () => {
+    schedule.scheduleJob({start: new Date(now + 4 * 60 * 1000), rule: '20 * * * * *'}, async () => {
         if(orderCanceledJobCurrent > currentHeight) {
             console.log(`[OrderCanceled] Sync ${orderCanceledJobCurrent} finished`)
             return;
@@ -133,7 +150,7 @@ web3Rpc.eth.getBlockNumber().then(currentHeight => {
                 pasarDBService.insertOrderEvent(orderEventDetail);
                 updateOrder(orderInfo._orderId, event.blockNumber);
             })
-            orderCanceledJobCurrent = tempBlockNumber + 1;
+            orderCanceledJobCurrent = toBlock + 1;
         }).catch( error => {
             console.log(error);
             console.log("[OrderCanceled] Sync Ending ...");
@@ -141,7 +158,7 @@ web3Rpc.eth.getBlockNumber().then(currentHeight => {
     });
 
 
-    schedule.scheduleJob({start: new Date(now + 5 * 60 * 1000), rule: '30 * * * * *'}, async () => {
+    schedule.scheduleJob({start: new Date(now + 4 * 60 * 1000), rule: '30 * * * * *'}, async () => {
         if(orderPriceChangedJobCurrent > currentHeight) {
             console.log(`[OrderPriceChanged] Sync ${orderPriceChangedJobCurrent} finished`)
             return;
@@ -165,23 +182,24 @@ web3Rpc.eth.getBlockNumber().then(currentHeight => {
                 updateOrder(orderInfo._orderId, event.blockNumber);
             })
 
-            orderPriceChangedJobCurrent = tempBlockNumber + 1;
+            orderPriceChangedJobCurrent = toBlock + 1;
         }).catch( error => {
             console.log(error);
             console.log("[OrderPriceChanged] Sync Ending ...");
         })
     });
 
+    /**
+     * transferSingle event
+     */
     schedule.scheduleJob({start: new Date(now + 2 * 60 * 1000), rule: '40 * * * * *'}, async () => {
         if(tokenInfoSyncJobCurrent > currentHeight) {
             console.log(`[TokenInfo] Sync ${tokenInfoSyncJobCurrent} finished`)
             return;
         }
 
-        const burnAddress = '0x0000000000000000000000000000000000000000';
-
         const tempBlockNumber = tokenInfoSyncJobCurrent + step
-        const toBlock = tempBlockNumber > currentHeight ? currentHeight : tempBlockNumber;
+        const toBlock = Math.min(tempBlockNumber, currentHeight);
 
         console.log(`[TokenInfo] Sync ${tokenInfoSyncJobCurrent} ~ ${toBlock} ...`)
 
@@ -189,22 +207,24 @@ web3Rpc.eth.getBlockNumber().then(currentHeight => {
             fromBlock: tokenInfoSyncJobCurrent, toBlock
         }).then(events => {
             events.forEach(async event => {
+                let blockNumber = event.blockNumber;
                 let from = event.returnValues._from;
                 let to = event.returnValues._to;
+
+                if(from !== burnAddress && to !== burnAddress && blockNumber > config.upgradeBlock) {
+                    return;
+                }
+
                 let tokenId = event.returnValues._id;
                 let value = event.returnValues._value;
-                let blockNumber = event.blockNumber;
                 let timestamp = (await web3Rpc.eth.getBlock(blockNumber)).timestamp;
 
-                let transferEvent = {tokenId, blockNumber, timestamp, from, to, value}
+                let transferEvent = {tokenId, blockNumber, timestamp, from, to, value};
                 await stickerDBService.addEvent(transferEvent);
 
                 if(to === burnAddress) {
                     await stickerDBService.burnToken(tokenId);
-                    return;
-                }
-
-                if(from === burnAddress) {
+                } else if(from === burnAddress) {
                     try {
                         let result = await stickerContract.methods.tokenInfo(tokenId).call();
                         let token = {blockNumber, tokenIndex: result.tokenIndex, tokenId, quantity: result.tokenSupply,
@@ -214,7 +234,6 @@ web3Rpc.eth.getBlockNumber().then(currentHeight => {
                         token.tokenIdHex = '0x' + new BigNumber(tokenId).toString(16);
 
                         let tokenCID = result.tokenUri.split(":")[2];
-
                         let response = await fetch(config.ipfsNodeUrl + tokenCID);
                         let data = await response.json();
                         token.kind = data.kind;
@@ -223,16 +242,74 @@ web3Rpc.eth.getBlockNumber().then(currentHeight => {
                         token.name = data.name;
                         token.description = data.description;
                         token.thumbnail = data.thumbnail;
+                        token.size = data.size;
+                        token.adult = data.adult ? data.adult : false;
 
+                        if(blockNumber > config.upgradeBlock) {
+                            let extraInfo = await stickerContract.methods.tokenExtraInfo(tokenId).call();
+                            token.didUri = extraInfo.didUri;
+
+                            let creatorCID = extraInfo.didUri.split(":")[2];
+                            let response = await fetch(config.ipfsNodeUrl + creatorCID);
+                            token.did = await response.json();
+
+                            await pasarDBService.replaceDid({address: result.royaltyOwner, did: token.did});
+                        }
                         await stickerDBService.replaceToken(token);
                     } catch (e) {
-                        logger.info(`[TokenInfo] Sync error at ${event.blockNumber} ${tokenId}`);
-                        logger.info(e);
+                        console.log(`[TokenInfo] Sync error at ${event.blockNumber} ${tokenId}`);
+                        console.log(e);
                     }
+                } else {
+                    await stickerDBService.updateToken(tokenId, to, timestamp);
                 }
+            })
+            tokenInfoSyncJobCurrent = toBlock + 1;
+        }).catch(error => {
+            console.log(error);
+            console.log("[TokenInfo] Sync Ending ...");
+        })
+    });
+
+    /**
+     * transferSingleWithMemo event
+     */
+    schedule.scheduleJob({start: new Date(now + 3 * 60 * 1000), rule: '40 * * * * *'}, async () => {
+        if(tokenInfoMemoSyncJobCurrent <= config.upgradeBlock && tokenInfoMemoSyncJobCurrent <= currentHeight) {
+            const tempBlockNumber = tokenInfoMemoSyncJobCurrent + step
+            const toBlock = Math.min(tempBlockNumber, currentHeight, config.upgradeBlock);
+            console.log(`[TokenInfoMemo] ${tokenInfoMemoSyncJobCurrent} ~ ${toBlock} Sync have not start yet!`)
+            tokenInfoMemoSyncJobCurrent = toBlock + 1;
+            return;
+        }
+
+        if(tokenInfoMemoSyncJobCurrent > currentHeight) {
+            console.log(`[TokenInfoMemo] Sync ${tokenInfoMemoSyncJobCurrent} finished`)
+            return;
+        }
+
+        const tempBlockNumber = tokenInfoMemoSyncJobCurrent + step
+        const toBlock = Math.min(tempBlockNumber, currentHeight);
+
+        console.log(`[TokenInfoMemo] Sync ${tokenInfoMemoSyncJobCurrent} ~ ${toBlock} ...`)
+
+        stickerContractWs.getPastEvents('TransferSingleWithMemo', {
+            fromBlock: tokenInfoMemoSyncJobCurrent, toBlock
+        }).then(events => {
+            events.forEach(async event => {
+                let from = event.returnValues._from;
+                let to = event.returnValues._to;
+                let tokenId = event.returnValues._id;
+                let value = event.returnValues._value;
+                let memo = event.returnValues._memo ? event.returnValues._memo : "";
+                let blockNumber = event.blockNumber;
+                let timestamp = (await web3Rpc.eth.getBlock(blockNumber)).timestamp;
+
+                let transferEvent = {tokenId, blockNumber, timestamp, from, to, value, memo};
+                await stickerDBService.addEvent(transferEvent);
                 await stickerDBService.updateToken(tokenId, to, timestamp);
             })
-            tokenInfoSyncJobCurrent = tempBlockNumber + 1;
+            tokenInfoMemoSyncJobCurrent = toBlock + 1;
         }).catch(error => {
             console.log(error);
             console.log("[TokenInfo] Sync Ending ...");

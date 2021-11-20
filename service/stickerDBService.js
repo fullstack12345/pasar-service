@@ -2,6 +2,25 @@ const {MongoClient} = require("mongodb");
 const config = require("../config");
 
 module.exports = {
+    getLastStickerSyncHeight: async function () {
+        let mongoClient = new MongoClient(config.mongodb, {useNewUrlParser: true, useUnifiedTopology: true});
+        try {
+            await mongoClient.connect();
+            const collection = mongoClient.db(config.dbName).collection('pasar_token_event');
+            let doc = await collection.findOne({}, {sort:{blockNumber: -1}});
+            if(doc) {
+                return doc.blockNumber
+            } else {
+                return config.stickerContractDeploy - 1;
+            }
+        } catch (err) {
+            logger.error(err);
+            throw new Error();
+        } finally {
+            await mongoClient.close();
+        }
+    },
+
     listStickers: async function(pageNum, pageSize) {
         let client = new MongoClient(config.mongodb, {useNewUrlParser: true, useUnifiedTopology: true});
         try {
@@ -95,7 +114,7 @@ module.exports = {
         let client = new MongoClient(config.mongodb, {useNewUrlParser: true, useUnifiedTopology: true});
         try {
             await client.connect();
-            const collection = client.db(config.dbName).collection('pasar_token_event');
+            let collection = client.db(config.dbName).collection('pasar_token_event');
 
             let result = [];
             if(owner) {
@@ -106,13 +125,16 @@ module.exports = {
                     { $match: {to: owner}},
                     { $lookup: {from: "pasar_token", localField: "tokenId", foreignField: "tokenId", as: "token"} },
                     { $unwind: "$token"},
-                    { $project: {"_id": 0, tokenId:1, blockNumber:1, timestamp:1, value: 1,memo: 1, holder: "$to", tokenIndex: "$token.tokenIndex", quantity: "$token.quantity",
-                            royalties: "$token.royalties",royaltyOwner: "$token.royaltyOwner", createTime: '$token.createTime', tokenIdHex: '$token.tokenIdHex',
-                            name: "$token.name", description: "$token.description", kind: "$token.kind", type: "$token.type", thumbnail: "$token.thumbnail", asset: "$token.asset"}}
+                    { $project: {"_id": 0, tokenId:1, blockNumber:1, timestamp:1, value: 1,memo: 1, holder: "$to",
+                            tokenIndex: "$token.tokenIndex", quantity: "$token.quantity", royalties: "$token.royalties",
+                            royaltyOwner: "$token.royaltyOwner", createTime: '$token.createTime', tokenIdHex: '$token.tokenIdHex',
+                            name: "$token.name", description: "$token.description", kind: "$token.kind", type: "$token.type",
+                            thumbnail: "$token.thumbnail", asset: "$token.asset", size: "$token.size", tokenDid: "$token.did"}}
                 ]).toArray();
             }
             if(creator) {
-                result = await collection.find({royaltyOwner: creator}).project({"_id": 0}).toArray();
+                collection = client.db(config.dbName).collection('pasar_token');
+                result = await collection.find({royaltyOwner: creator}).sort({blockNumber: -1}).project({"_id": 0}).toArray();
             }
 
             return {code: 200, message: 'success', data: {result}};
@@ -130,6 +152,19 @@ module.exports = {
             await mongoClient.connect();
             const collection = mongoClient.db(config.dbName).collection('pasar_token');
             return await collection.find({}).count();
+        } catch (err) {
+            logger.error(err);
+        } finally {
+            await mongoClient.close();
+        }
+    },
+
+    tokenTrans: async function(tokenId) {
+        let mongoClient = new MongoClient(config.mongodb, {useNewUrlParser: true, useUnifiedTopology: true});
+        try {
+            await mongoClient.connect();
+            const collection = mongoClient.db(config.dbName).collection('pasar_token_event');
+            return await collection.find({tokenId}).sort({blockNumber: -1}).toArray();
         } catch (err) {
             logger.error(err);
         } finally {

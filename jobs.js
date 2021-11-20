@@ -14,6 +14,8 @@ module.exports = {
 
         const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
 
+        const burnAddress = '0x0000000000000000000000000000000000000000';
+
         let web3WsProvider = new Web3.providers.WebsocketProvider(config.escWsUrl, {
             reconnect: {
                 auto: true,
@@ -33,26 +35,78 @@ module.exports = {
 
         let isGetForSaleOrderJobRun = false;
         let isGetTokenInfoJobRun = false;
+        let isGetTokenInfoWithMemoJobRun = false;
         let now = Date.now();
 
         let recipients = [];
         recipients.push('lifayi2008@163.com');
 
-        function updateOrder(orderId, blockNumber) {
-            logger.info(`[GetOrderInfo] orderId: ${orderId}   blockNumber: ${blockNumber}`);
-
-            pasarContract.methods.getOrderById(orderId).call().then(result => {
+        async function updateOrder(orderId, blockNumber) {
+            try {
+                let result = await pasarContract.methods.getOrderById(orderId).call();
                 let pasarOrder = {orderId: result.orderId, orderType: result.orderType, orderState: result.orderState,
                     tokenId: result.tokenId, amount: result.amount, price: result.price, endTime: result.endTime,
                     sellerAddr: result.sellerAddr, buyerAddr: result.buyerAddr, bids: result.bids, lastBidder: result.lastBidder,
                     lastBid: result.lastBid, filled: result.filled, royaltyOwner: result.royaltyOwner, royaltyFee: result.royaltyFee,
                     createTime: result.createTime, updateTime: result.updateTime, blockNumber}
 
-                pasarDBService.updateOrInsert(pasarOrder);
-            }).catch(error => {
+                if(result.orderState === "1" && blockNumber > config.upgradeBlock) {
+                    let extraInfo = await pasarContract.methods.getOrderExtraById(orderId).call();
+                    pasarOrder.platformAddr = extraInfo.platformAddr;
+                    pasarOrder.platformFee = extraInfo.platformFee;
+                    pasarOrder.sellerUri = extraInfo.sellerUri;
+
+                    let tokenCID = extraInfo.sellerUri.split(":")[2];
+                    let response = await fetch(config.ipfsNodeUrl + tokenCID);
+                    pasarOrder.sellerDid = await response.json();
+
+                    await pasarDBService.replaceDid({address: result.sellerAddr, did: pasarOrder.sellerDid});
+                }
+                await pasarDBService.updateOrInsert(pasarOrder);
+            } catch(error) {
                 logger.info(error);
                 logger.info(`[OrderForSale] Sync - getOrderById(${orderId}) call error`);
-            })
+            }
+        }
+
+        async function dealWithNewToken(blockNumber,tokenId) {
+            try {
+                let result = await stickerContract.methods.tokenInfo(tokenId).call();
+                let token = {blockNumber, tokenIndex: result.tokenIndex, tokenId, quantity: result.tokenSupply,
+                    royalties:result.royaltyFee, royaltyOwner: result.royaltyOwner, holder: result.royaltyOwner,
+                    createTime: result.createTime, updateTime: result.updateTime}
+
+                token.tokenIdHex = '0x' + new BigNumber(tokenId).toString(16);
+
+                let tokenCID = result.tokenUri.split(":")[2];
+                let response = await fetch(config.ipfsNodeUrl + tokenCID);
+                let data = await response.json();
+                token.kind = data.kind;
+                token.type = data.type;
+                token.asset = data.image;
+                token.name = data.name;
+                token.description = data.description;
+                token.thumbnail = data.thumbnail;
+                token.size = data.size;
+                token.adult = data.adult ? data.adult : false;
+
+                if(blockNumber > config.upgradeBlock) {
+                    let extraInfo = await stickerContract.methods.tokenExtraInfo(tokenId).call();
+                    token.didUri = extraInfo.didUri;
+
+                    let creatorCID = extraInfo.didUri.split(":")[2];
+                    let response = await fetch(config.ipfsNodeUrl + creatorCID);
+                    token.did = await response.json();
+
+                    logger.info(`[TokenInfo] New token info: ${JSON.stringify(token)}`)
+                    await pasarDBService.replaceDid({address: result.royaltyOwner, did: token.did});
+                }
+
+                await stickerDBService.replaceToken(token);
+            } catch (e) {
+                logger.info(`[TokenInfo] Sync error at ${blockNumber} ${tokenId}`);
+                logger.info(e);
+            }
         }
 
         let orderForSaleJobId = schedule.scheduleJob(new Date(now + 60 * 1000), async () => {
@@ -67,15 +121,15 @@ module.exports = {
                 logger.info(error);
                 logger.info("[OrderForSale] Sync Ending ...")
                 isGetForSaleOrderJobRun = false
-            }).on("data", function (event) {
+            }).on("data", async function (event) {
                 let orderInfo = event.returnValues;
                 let orderEventDetail = {orderId: orderInfo._orderId, event: event.event, blockNumber: event.blockNumber,
                     tHash: event.transactionHash, tIndex: event.transactionIndex, blockHash: event.blockHash,
                     logIndex: event.logIndex, removed: event.removed, id: event.id}
 
                 logger.info(`[OrderForSale] orderEventDetail: ${JSON.stringify(orderEventDetail)}`)
-                pasarDBService.insertOrderEvent(orderEventDetail);
-                updateOrder(orderInfo._orderId, event.blockNumber);
+                await pasarDBService.insertOrderEvent(orderEventDetail);
+                await updateOrder(orderInfo._orderId, event.blockNumber);
             })
         });
 
@@ -89,15 +143,15 @@ module.exports = {
             }).on("error", function (error) {
                 logger.info(error);
                 logger.info("[OrderFilled] Sync Ending ...");
-            }).on("data", function (event) {
+            }).on("data", async function (event) {
                 let orderInfo = event.returnValues;
                 let orderEventDetail = {orderId: orderInfo._orderId, event: event.event, blockNumber: event.blockNumber,
                     tHash: event.transactionHash, tIndex: event.transactionIndex, blockHash: event.blockHash,
                     logIndex: event.logIndex, removed: event.removed, id: event.id}
 
                 logger.info(`[OrderFilled] orderEventDetail: ${JSON.stringify(orderEventDetail)}`)
-                pasarDBService.insertOrderEvent(orderEventDetail);
-                updateOrder(orderInfo._orderId, event.blockNumber);
+                await pasarDBService.insertOrderEvent(orderEventDetail);
+                await updateOrder(orderInfo._orderId, event.blockNumber);
             })
         });
 
@@ -111,15 +165,15 @@ module.exports = {
             }).on("error", function (error) {
                 logger.info(error);
                 logger.info("[OrderCanceled] Sync Ending ...");
-            }).on("data", function (event) {
+            }).on("data", async function (event) {
                 let orderInfo = event.returnValues;
                 let orderEventDetail = {orderId: orderInfo._orderId, event: event.event, blockNumber: event.blockNumber,
                     tHash: event.transactionHash, tIndex: event.transactionIndex, blockHash: event.blockHash,
                     logIndex: event.logIndex, removed: event.removed, id: event.id};
 
                 logger.info(`[OrderCanceled] orderEventDetail: ${JSON.stringify(orderEventDetail)}`)
-                pasarDBService.insertOrderEvent(orderEventDetail);
-                updateOrder(orderInfo._orderId, event.blockNumber);
+                await pasarDBService.insertOrderEvent(orderEventDetail);
+                await updateOrder(orderInfo._orderId, event.blockNumber);
             })
         });
 
@@ -133,21 +187,20 @@ module.exports = {
             }).on("error", function (error) {
                 logger.info(error);
                 logger.info("[OrderPriceChanged] Sync Ending ...");
-            }).on("data", function (event) {
+            }).on("data", async function (event) {
                 let orderInfo = event.returnValues;
                 let orderEventDetail = {orderId: orderInfo._orderId, event: event.event, blockNumber: event.blockNumber,
                     tHash: event.transactionHash, tIndex: event.transactionIndex, blockHash: event.blockHash,
                     logIndex: event.logIndex, removed: event.removed, id: event.id}
 
                 logger.info(`[OrderPriceChanged] orderEventDetail: ${JSON.stringify(orderEventDetail)}`)
-                pasarDBService.insertOrderEvent(orderEventDetail);
-                updateOrder(orderInfo._orderId, event.blockNumber);
+                await pasarDBService.insertOrderEvent(orderEventDetail);
+                await updateOrder(orderInfo._orderId, event.blockNumber);
             })
         });
 
         let tokenInfoSyncJobId = schedule.scheduleJob(new Date(now + 60 * 1000), async () => {
-            const burnAddress = '0x0000000000000000000000000000000000000000';
-            let lastHeight = await pasarDBService.getLastStickerSyncHeight();
+            let lastHeight = await stickerDBService.getLastStickerSyncHeight();
             isGetTokenInfoJobRun = true;
             logger.info(`[TokenInfo] Sync Starting ... from block ${lastHeight + 1}`)
 
@@ -158,48 +211,55 @@ module.exports = {
                 logger.info("[TokenInfo] Sync Ending ...");
                 isGetTokenInfoJobRun = false
             }).on("data", async function (event) {
-
+                let blockNumber = event.blockNumber;
                 let from = event.returnValues._from;
                 let to = event.returnValues._to;
+
+                if(from !== burnAddress && to !== burnAddress && blockNumber > config.upgradeBlock) {
+                    return;
+                }
+
                 let tokenId = event.returnValues._id;
                 let value = event.returnValues._value;
-                let blockNumber = event.blockNumber;
                 let timestamp = (await web3Rpc.eth.getBlock(blockNumber)).timestamp;
 
                 let transferEvent = {tokenId, blockNumber, timestamp, from, to, value}
                 await stickerDBService.addEvent(transferEvent);
+                logger.info(`[TokenInfo] tokenEvent: ${transferEvent}`)
 
                 if(to === burnAddress) {
                     await stickerDBService.burnToken(tokenId);
-                    return;
+                } else if(from === burnAddress) {
+                    await dealWithNewToken(blockNumber, tokenId)
+                } else {
+                    await stickerDBService.updateToken(tokenId, to, timestamp);
                 }
+            })
+        });
 
-                if(from === burnAddress) {
-                    try {
-                        let result = await stickerContract.methods.tokenInfo(tokenId).call();
-                        let token = {blockNumber, tokenIndex: result.tokenIndex, tokenId, quantity: result.tokenSupply,
-                            royalties:result.royaltyFee, royaltyOwner: result.royaltyOwner, holder: result.royaltyOwner,
-                            createTime: result.createTime, updateTime: result.updateTime}
+        let tokenInfoWithMemoSyncJobId = schedule.scheduleJob(new Date(now + 60 * 1000), async () => {
+            let lastHeight = await stickerDBService.getLastStickerSyncHeight();
+            isGetTokenInfoWithMemoJobRun = true;
+            logger.info(`[TokenInfoWithMemo] Sync Starting ... from block ${lastHeight + 1}`)
 
-                        token.tokenIdHex = '0x' + new BigNumber(tokenId).toString(16);
+            stickerContractWs.events.TransferSingleWithMemo({
+                fromBlock: lastHeight + 1
+            }).on("error", function (error) {
+                logger.info(error);
+                logger.info("[TokenInfoWithMemo] Sync Ending ...");
+                isGetTokenInfoWithMemoJobRun = false
+            }).on("data", async function (event) {
+                let from = event.returnValues._from;
+                let to = event.returnValues._to;
+                let tokenId = event.returnValues._id;
+                let value = event.returnValues._value;
+                let memo = event.returnValues._memo ? event.returnValues._memo : "";
+                let blockNumber = event.blockNumber;
+                let timestamp = (await web3Rpc.eth.getBlock(blockNumber)).timestamp;
 
-                        let tokenCID = result.tokenUri.split(":")[2];
-
-                        let response = await fetch(config.ipfsNodeUrl + tokenCID);
-                        let data = await response.json();
-                        token.kind = data.kind;
-                        token.type = data.type;
-                        token.asset = data.image;
-                        token.name = data.name;
-                        token.description = data.description;
-                        token.thumbnail = data.thumbnail;
-
-                        await stickerDBService.replaceToken(token);
-                    } catch (e) {
-                        logger.info(`[TokenInfo] Sync error at ${event.blockNumber} ${tokenId}`);
-                        logger.info(e);
-                    }
-                }
+                let transferEvent = {tokenId, blockNumber, timestamp, from, to, value, memo}
+                await stickerDBService.addEvent(transferEvent);
+                logger.info(`[TokenInfoWithMemo] transferToken: ${transferEvent}`)
                 await stickerDBService.updateToken(tokenId, to, timestamp);
             })
         });
@@ -216,6 +276,10 @@ module.exports = {
 
             if(!isGetTokenInfoJobRun) {
                 tokenInfoSyncJobId.reschedule(new Date(now + 60 * 1000))
+            }
+
+            if(!isGetTokenInfoWithMemoJobRun) {
+                tokenInfoWithMemoSyncJobId.reschedule(new Date(now + 60 * 1000))
             }
         });
 

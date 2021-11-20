@@ -22,17 +22,13 @@ module.exports = {
         }
     },
 
-    getLastStickerSyncHeight: async function () {
+    updateOrInsert: async function (pasarOrder) {
+        let {orderId, ...rest} = pasarOrder;
         let mongoClient = new MongoClient(config.mongodb, {useNewUrlParser: true, useUnifiedTopology: true});
         try {
             await mongoClient.connect();
-            const collection = mongoClient.db(config.dbName).collection('pasar_token');
-            let doc = await collection.findOne({}, {sort:{blockNumber: -1}});
-            if(doc) {
-                return doc.blockNumber
-            } else {
-                return config.stickerContractDeploy - 1;
-            }
+            const collection = mongoClient.db(config.dbName).collection('pasar_order');
+            await collection.updateOne({orderId}, {$set: rest}, {upsert: true});
         } catch (err) {
             logger.error(err);
             throw new Error();
@@ -41,13 +37,12 @@ module.exports = {
         }
     },
 
-    updateOrInsert: async function (pasarOrder) {
-        let {orderId, ...rest} = pasarOrder;
+    replaceDid: async function({address, did}) {
         let mongoClient = new MongoClient(config.mongodb, {useNewUrlParser: true, useUnifiedTopology: true});
         try {
             await mongoClient.connect();
-            const collection = mongoClient.db(config.dbName).collection('pasar_order');
-            await collection.updateOne({orderId}, {$set: rest}, {upsert: true});
+            const collection = mongoClient.db(config.dbName).collection('pasar_address_did');
+            await collection.updateOne({address}, {$set: {did}}, {upsert: true});
         } catch (err) {
             logger.error(err);
             throw new Error();
@@ -84,10 +79,11 @@ module.exports = {
                 { $unwind: "$token"},
                 { $project: {"_id": 0, orderId:1, orderType:1, orderState:1, tokenId: 1,blockNumber: 1, amount: 1,
                         price: 1, endTime: 1, sellerAddr: 1, buyerAddr: 1, bids: 1, lastBidder: 1, filled:1, royaltyFee: 1,
-                        createTime: 1, updateTime: 1, lastBid: 1, asset: "$token.asset", name: "$token.name",
-                        description: "$token.description", kind: "$token.kind", type: "$token.type",
+                        createTime: 1, updateTime: 1, lastBid: 1,sellerDid: 1, asset: "$token.asset", name: "$token.name",
+                        description: "$token.description", kind: "$token.kind", type: "$token.type", size: "$token.size",
                         royalties: "$token.royalties",royaltyOwner: "$token.royaltyOwner", quantity: "$token.quantity",
-                        thumbnail: "$token.thumbnail", tokenCreateTime: "$token.createTime", tokenUpdateTime: "$token.updateTime"}},
+                        tokenDid: "$token.did", thumbnail: "$token.thumbnail", tokenCreateTime: "$token.createTime",
+                        tokenUpdateTime: "$token.updateTime", adult: "$token.adult"}},
                 { $sort: {blockNumber: sort}},
                 { $skip: (pageNum - 1) * pageSize },
                 { $limit: pageSize }
@@ -101,8 +97,8 @@ module.exports = {
             }
 
             let total = await collection.find(match).count();
-
             let result = await collection.aggregate(pipeline).toArray();
+
             return {code: 200, message: 'success', data: {total, result}};
         } catch (err) {
             logger.error(err);

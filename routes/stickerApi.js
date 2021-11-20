@@ -68,4 +68,24 @@ router.get('/query', function(req, res) {
     })
 });
 
+router.get('/tokenTrans', function(req, res) {
+    let tokenId = req.query.tokenId;
+
+    if(!tokenId) {
+        res.json({code: 400, message: 'bad request'})
+        return;
+    }
+
+    if(tokenId.startsWith('0x') && tokenId.length > 42) {
+        tokenId = new BigNumber(tokenId).toFormat({prefix:""});
+    }
+
+    stickerDBService.tokenTrans(tokenId).then(result => {
+        res.json(result);
+    }).catch(error => {
+        console.log(error);
+        res.json({code: 500, message: 'server error'});
+    })
+});
+
 module.exports = router;

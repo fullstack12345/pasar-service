@@ -375,3 +375,15 @@ response:     {"code": 200, "message": "success", data: [{}, ...]  成功
               {"code": 400, "message": <descripton>}  参数错误
               {"code": 500, "message": <descripton>}  服务器错误
 ```
+
+4. 查询 `stickers` 交易历史
+
+```
+url:          /tokenTrans
+method:       GET
+parameter:    tokenId ( tokenID 必选)
+              
+response:     {"code": 200, "message": "success", data: [{}, ...]  成功
+              {"code": 400, "message": <descripton>}  参数错误
+              {"code": 500, "message": <descripton>}  服务器错误
+```

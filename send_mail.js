@@ -1,20 +1,21 @@
 const nodemailer = require("nodemailer");
+const config = require("./config");
 
 async function sendMail(subject, content, recipients, html) {
     let account = await nodemailer.createTestAccount();
 
     let transporter = nodemailer.createTransport({
-        host: "email-smtp.us-east-1.amazonaws.com",
-        port: 465,
+        host: config.mailHost,
+        port: config.mailPort,
         secure: true, // true for 465, false for other ports
         auth: {
-            user: '', // generated ethereal user
-            pass: '' // generated ethereal password
+            user: config.mailUser, // generated ethereal user
+            pass: config.mailPass // generated ethereal password
         }
     });
 
     let mailOptions = {
-        from: '"lifayi@elastos.org" <lifayi@elastos.org>', // sender address
+        from: `"${config.mailFrom}" <${config.mailFrom}>`, // sender address
         to: recipients, // list of receivers, comma separate
         subject: subject, // Subject line
         text: content, // plain text body
@@ -22,13 +23,12 @@ async function sendMail(subject, content, recipients, html) {
     };
 
     try {
-
         let info = await transporter.sendMail(mailOptions);
+        console.log("Message sent: %s", info.messageId);
+        console.log("Preview URL: %s", nodemailer.getTestMessageUrl(info));
     } catch(e) {
         console.log(e);
     }
-    console.log("Message sent: %s", info.messageId);
-    console.log("Preview URL: %s", nodemailer.getTestMessageUrl(info));
 }
 
 module.exports = sendMail;
