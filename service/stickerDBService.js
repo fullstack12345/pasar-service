@@ -129,7 +129,8 @@ module.exports = {
                             tokenIndex: "$token.tokenIndex", quantity: "$token.quantity", royalties: "$token.royalties",
                             royaltyOwner: "$token.royaltyOwner", createTime: '$token.createTime', tokenIdHex: '$token.tokenIdHex',
                             name: "$token.name", description: "$token.description", kind: "$token.kind", type: "$token.type",
-                            thumbnail: "$token.thumbnail", asset: "$token.asset", size: "$token.size", tokenDid: "$token.did"}}
+                            thumbnail: "$token.thumbnail", asset: "$token.asset", size: "$token.size", tokenDid: "$token.did",
+                            adult: "$token.adult"}}
                 ]).toArray();
             }
             if(creator) {
