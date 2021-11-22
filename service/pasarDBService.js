@@ -100,28 +100,28 @@ module.exports = {
             let result = await collection.aggregate(pipeline).toArray();
 
             //deal with the situation that token royaltyOwner's did may not exist
-            let addresses = [];
-            result.forEach(item => {
-                if(!item.tokenDid) {
-                    addresses.push(item.royaltyOwner)
-                }
-            })
-
-            if(addresses.length !== 0) {
-                let didList = await this.getDidListByAddresses(addresses);
-                if(didList.length !== 0) {
-                    let didListMap = new Map();
-                    didList.forEach(item => {
-                        didListMap.set(item.address, item.did);
-                    })
-
-                    result.forEach(item => {
-                        if(!item.tokenDid) {
-                            item.tokenDid = didListMap.get(item.royaltyOwner)
-                        }
-                    })
-                }
-            }
+            // let addresses = [];
+            // result.forEach(item => {
+            //     if(!item.tokenDid) {
+            //         addresses.push(item.royaltyOwner)
+            //     }
+            // })
+            //
+            // if(addresses.length !== 0) {
+            //     let didList = await this.getDidListByAddresses(addresses);
+            //     if(didList.length !== 0) {
+            //         let didListMap = new Map();
+            //         didList.forEach(item => {
+            //             didListMap.set(item.address, item.did);
+            //         })
+            //
+            //         result.forEach(item => {
+            //             if(!item.tokenDid) {
+            //                 item.tokenDid = didListMap.get(item.royaltyOwner)
+            //             }
+            //         })
+            //     }
+            // }
 
             return {code: 200, message: 'success', data: {total, result}};
         } catch (err) {
