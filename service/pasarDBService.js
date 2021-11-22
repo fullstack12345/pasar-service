@@ -150,7 +150,7 @@ module.exports = {
         try {
             await mongoClient.connect();
             const collection = mongoClient.db(config.dbName).collection('pasar_address_did');
-            let result =  await collection.find({address}).project({"_id": 0}).toArray();
+            let result =  await collection.findOne({address}).project({"_id": 0});
             return {code: 200, message: 'success', data: result};
         } catch (err) {
             logger.error(err);
