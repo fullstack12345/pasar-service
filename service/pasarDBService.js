@@ -99,10 +99,47 @@ module.exports = {
             let total = await collection.find(match).count();
             let result = await collection.aggregate(pipeline).toArray();
 
+            //deal with the situation that token royaltyOwner's did may not exist
+            let addresses = [];
+            result.forEach(item => {
+                if(!item.tokenDid) {
+                    addresses.push(item.royaltyOwner)
+                }
+            })
+
+            if(addresses.length !== 0) {
+                let didList = await this.getDidListByAddresses(addresses);
+                if(didList.length !== 0) {
+                    let didListMap = new Map();
+                    didList.forEach(item => {
+                        didListMap.set(item.address, item.did);
+                    })
+
+                    result.forEach(item => {
+                        if(!item.tokenDid) {
+                            item.tokenDid = didListMap.get(item.royaltyOwner)
+                        }
+                    })
+                }
+            }
+
             return {code: 200, message: 'success', data: {total, result}};
         } catch (err) {
             logger.error(err);
             return {code: 500, message: 'server error'};
+        } finally {
+            await mongoClient.close();
+        }
+    },
+
+    getDidListByAddresses: async function(addresses) {
+        let mongoClient = new MongoClient(config.mongodb, {useNewUrlParser: true, useUnifiedTopology: true});
+        try {
+            await mongoClient.connect();
+            const collection = mongoClient.db(config.dbName).collection('pasar_address_did');
+            return await collection.find({address: {$in: addresses}}).project({"_id": 0}).toArray();
+        } catch (err) {
+            logger.error(err);
         } finally {
             await mongoClient.close();
         }

@@ -225,7 +225,7 @@ module.exports = {
 
                 let transferEvent = {tokenId, blockNumber, timestamp, from, to, value}
                 await stickerDBService.addEvent(transferEvent);
-                logger.info(`[TokenInfo] tokenEvent: ${transferEvent}`)
+                logger.info(`[TokenInfo] tokenEvent: ${JSON.stringify(transferEvent)}`)
 
                 if(to === burnAddress) {
                     await stickerDBService.burnToken(tokenId);
@@ -259,7 +259,7 @@ module.exports = {
 
                 let transferEvent = {tokenId, blockNumber, timestamp, from, to, value, memo}
                 await stickerDBService.addEvent(transferEvent);
-                logger.info(`[TokenInfoWithMemo] transferToken: ${transferEvent}`)
+                logger.info(`[TokenInfoWithMemo] transferToken: ${JSON.stringify(transferEvent)}`)
                 await stickerDBService.updateToken(tokenId, to, timestamp);
             })
         });
