@@ -134,4 +134,15 @@ router.get('/whitelist', function(req, res) {
     })
 })
 
+router.get('/getDidByAddress', function(req, res) {
+    let address = req.query.address;
+
+    pasarDBService.getDidByAddress(address).then(result => {
+        res.json(result);
+    }).catch(error => {
+        console.log(error);
+        res.json({code: 500, message: 'server error'});
+    })
+})
+
 module.exports = router;

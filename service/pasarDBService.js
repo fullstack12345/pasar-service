@@ -145,6 +145,20 @@ module.exports = {
         }
     },
 
+    getDidByAddress: async function(address) {
+        let mongoClient = new MongoClient(config.mongodb, {useNewUrlParser: true, useUnifiedTopology: true});
+        try {
+            await mongoClient.connect();
+            const collection = mongoClient.db(config.dbName).collection('pasar_address_did');
+            let result =  await collection.find({address}).project({"_id": 0}).toArray();
+            return {code: 200, message: 'success', data: result};
+        } catch (err) {
+            logger.error(err);
+        } finally {
+            await mongoClient.close();
+        }
+    },
+
     getWhitelist: async function(address) {
         let mongoClient = new MongoClient(config.mongodb, {useNewUrlParser: true, useUnifiedTopology: true});
         try {
