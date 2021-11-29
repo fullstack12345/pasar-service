@@ -11,7 +11,6 @@ module.exports = {
             if(doc) {
                 return doc.blockNumber
             } else {
-                //Pasar contract deploy at 7801378
                 return config.pasarContractDeploy - 1;
             }
         } catch (err) {
@@ -28,7 +27,7 @@ module.exports = {
         try {
             await mongoClient.connect();
             const collection = mongoClient.db(config.dbName).collection('pasar_order');
-            await collection.updateOne({orderId}, {$set: rest}, {upsert: true});
+            return await collection.updateOne({orderId, blockNumber: {$lt: blockNumber}}, {$set: rest}, {upsert: true});
         } catch (err) {
             logger.error(err);
             throw new Error();

@@ -62,10 +62,15 @@ module.exports = {
 
                     await pasarDBService.replaceDid({address: result.sellerAddr, did: pasarOrder.sellerDid});
                 }
-                await pasarDBService.updateOrInsert(pasarOrder, blockNumber);
+                let res = await pasarDBService.updateOrInsert(pasarOrder, blockNumber);
+                if(res.modifiedCount !== 1 && res.upsertedCount !== 1) {
+                    console.log('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>')
+                    console.log(`${eventType}]  update or insert order info error : ${JSON.stringify(pasarOrder)}`)
+                    console.log('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>')
+                }
             } catch(error) {
-                logger.info(error);
-                logger.info(`[OrderForSale] Sync - getOrderById(${orderId}) call error`);
+                console.log(error);
+                console.log(`[OrderForSale] Sync - getOrderById(${orderId}) at ${blockNumber} call error`);
             }
         }
 
@@ -133,6 +138,28 @@ module.exports = {
             })
         });
 
+        let orderPriceChangedJobId = schedule.scheduleJob(new Date(now + 2 * 60 * 1000), async () => {
+            let lastHeight = await pasarDBService.getLastPasarOrderSyncHeight('OrderPriceChanged');
+
+            logger.info(`[OrderPriceChanged] Sync start from height: ${lastHeight}`);
+
+            pasarContractWs.events.OrderPriceChanged({
+                fromBlock: lastHeight + 1
+            }).on("error", function (error) {
+                logger.info(error);
+                logger.info("[OrderPriceChanged] Sync Ending ...");
+            }).on("data", async function (event) {
+                let orderInfo = event.returnValues;
+                let orderEventDetail = {orderId: orderInfo._orderId, event: event.event, blockNumber: event.blockNumber,
+                    tHash: event.transactionHash, tIndex: event.transactionIndex, blockHash: event.blockHash,
+                    logIndex: event.logIndex, removed: event.removed, id: event.id}
+
+                logger.info(`[OrderPriceChanged] orderEventDetail: ${JSON.stringify(orderEventDetail)}`)
+                await pasarDBService.insertOrderEvent(orderEventDetail);
+                await updateOrder(orderInfo._orderId, event.blockNumber);
+            })
+        });
+
         let orderFilledJobId = schedule.scheduleJob(new Date(now + 3 * 60 * 1000), async () => {
             let lastHeight = await pasarDBService.getLastPasarOrderSyncHeight('OrderFilled');
 
@@ -172,28 +199,6 @@ module.exports = {
                     logIndex: event.logIndex, removed: event.removed, id: event.id};
 
                 logger.info(`[OrderCanceled] orderEventDetail: ${JSON.stringify(orderEventDetail)}`)
-                await pasarDBService.insertOrderEvent(orderEventDetail);
-                await updateOrder(orderInfo._orderId, event.blockNumber);
-            })
-        });
-
-        let orderPriceChangedJobId = schedule.scheduleJob(new Date(now + 2 * 60 * 1000), async () => {
-            let lastHeight = await pasarDBService.getLastPasarOrderSyncHeight('OrderPriceChanged');
-
-            logger.info(`[OrderPriceChanged] Sync start from height: ${lastHeight}`);
-
-            pasarContractWs.events.OrderPriceChanged({
-                fromBlock: lastHeight + 1
-            }).on("error", function (error) {
-                logger.info(error);
-                logger.info("[OrderPriceChanged] Sync Ending ...");
-            }).on("data", async function (event) {
-                let orderInfo = event.returnValues;
-                let orderEventDetail = {orderId: orderInfo._orderId, event: event.event, blockNumber: event.blockNumber,
-                    tHash: event.transactionHash, tIndex: event.transactionIndex, blockHash: event.blockHash,
-                    logIndex: event.logIndex, removed: event.removed, id: event.id}
-
-                logger.info(`[OrderPriceChanged] orderEventDetail: ${JSON.stringify(orderEventDetail)}`)
                 await pasarDBService.insertOrderEvent(orderEventDetail);
                 await updateOrder(orderInfo._orderId, event.blockNumber);
             })
@@ -270,9 +275,9 @@ module.exports = {
 
             if(!isGetForSaleOrderJobRun) {
                 orderForSaleJobId.reschedule(new Date(now + 60 * 1000));
-                orderFilledJobId.reschedule(new Date(now + 2 * 60 * 1000));
-                orderCanceledJobId.reschedule(new Date(now + 2 * 60 * 1000));
-                orderPriceChangedJobId.reschedule(new Date(now + 3 * 60 * 1000));
+                orderPriceChangedJobId.reschedule(new Date(now + 2 * 60 * 1000));
+                orderFilledJobId.reschedule(new Date(now + 3 * 60 * 1000));
+                orderCanceledJobId.reschedule(new Date(now + 3 * 60 * 1000));
             }
 
             if(!isGetTokenInfoJobRun) {

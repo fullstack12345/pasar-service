@@ -50,13 +50,15 @@ let updateOrder = async function(orderId, blockNumber, eventType) {
 
             await pasarDBService.replaceDid({address: result.sellerAddr, did: pasarOrder.sellerDid});
         }
-        let res = await pasarDBService.updateOrInsert(pasarOrder);
+        let res = await pasarDBService.updateOrInsert(pasarOrder, blockNumber);
         if(res.modifiedCount !== 1 && res.upsertedCount !== 1) {
-            console.log(`#############################[${eventType}]  update or insert orderInfo error : ${JSON.stringify(pasarOrder)}`)
+            console.log('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>')
+            console.log(`${eventType}]  update or insert order info error : ${JSON.stringify(pasarOrder)}`)
+            console.log('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>')
         }
     } catch(error) {
         console.log(error);
-        console.log(`[OrderForSale] Sync - getOrderById(${orderId}) call error`);
+        console.log(`[OrderForSale] Sync - getOrderById(${orderId}) at ${blockNumber} call error`);
     }
 }
 
@@ -99,6 +101,40 @@ web3Rpc.eth.getBlockNumber().then(currentHeight => {
         })
     });
 
+
+    schedule.scheduleJob({start: new Date(now + 2 * 60 * 1000), rule: '30 * * * * *'}, async () => {
+        if(orderPriceChangedJobCurrent > currentHeight) {
+            console.log(`[OrderPriceChanged] Sync ${orderPriceChangedJobCurrent} finished`)
+            return;
+        }
+
+        const tempBlockNumber = orderPriceChangedJobCurrent + step
+        const toBlock = tempBlockNumber > currentHeight ? currentHeight : tempBlockNumber;
+
+        console.log(`[OrderPriceChanged] Sync ${orderPriceChangedJobCurrent} ~ ${toBlock} ...`)
+
+        pasarContractWs.getPastEvents('OrderPriceChanged', {
+            fromBlock: orderPriceChangedJobCurrent, toBlock
+        }).then(events => {
+            events.forEach(event => {
+                let orderInfo = event.returnValues;
+                let orderEventDetail = {orderId: orderInfo._orderId, event: event.event, blockNumber: event.blockNumber,
+                    tHash: event.transactionHash, tIndex: event.transactionIndex, blockHash: event.blockHash,
+                    logIndex: event.logIndex, removed: event.removed, id: event.id,
+                    data: {oldPrice: orderInfo._oldPrice, newPrice: orderInfo._newPrice}}
+
+                console.log(`[OrderPriceChanged] orderEventDetail: ${JSON.stringify(orderEventDetail)}`)
+                pasarDBService.insertOrderEvent(orderEventDetail);
+                updateOrder(orderInfo._orderId, event.blockNumber, 'OrderPriceChanged');
+            })
+
+            orderPriceChangedJobCurrent = toBlock + 1;
+        }).catch( error => {
+            console.log(error);
+            console.log("[OrderPriceChanged] Sync Ending ...");
+        })
+    });
+
     schedule.scheduleJob({start: new Date(now + 3 * 60 * 1000), rule: '10 * * * * *'}, async () => {
         if(orderFilledJobCurrent > currentHeight) {
             console.log(`[OrderFilled] Sync ${orderFilledJobCurrent} finished`)
@@ -119,6 +155,7 @@ web3Rpc.eth.getBlockNumber().then(currentHeight => {
                     tHash: event.transactionHash, tIndex: event.transactionIndex, blockHash: event.blockHash,
                     logIndex: event.logIndex, removed: event.removed, id: event.id}
 
+                console.log(`[OrderFilled] orderEventDetail: ${JSON.stringify(orderEventDetail)}`)
                 pasarDBService.insertOrderEvent(orderEventDetail);
                 updateOrder(orderInfo._orderId, event.blockNumber, 'OrderFilled');
             })
@@ -149,6 +186,7 @@ web3Rpc.eth.getBlockNumber().then(currentHeight => {
                     tHash: event.transactionHash, tIndex: event.transactionIndex, blockHash: event.blockHash,
                     logIndex: event.logIndex, removed: event.removed, id: event.id};
 
+                console.log(`[OrderCanceled] orderEventDetail: ${JSON.stringify(orderEventDetail)}`)
                 pasarDBService.insertOrderEvent(orderEventDetail);
                 updateOrder(orderInfo._orderId, event.blockNumber, 'OrderCanceled');
             })
@@ -156,38 +194,6 @@ web3Rpc.eth.getBlockNumber().then(currentHeight => {
         }).catch( error => {
             console.log(error);
             console.log("[OrderCanceled] Sync Ending ...");
-        })
-    });
-
-
-    schedule.scheduleJob({start: new Date(now + 2 * 60 * 1000), rule: '30 * * * * *'}, async () => {
-        if(orderPriceChangedJobCurrent > currentHeight) {
-            console.log(`[OrderPriceChanged] Sync ${orderPriceChangedJobCurrent} finished`)
-            return;
-        }
-
-        const tempBlockNumber = orderPriceChangedJobCurrent + step
-        const toBlock = tempBlockNumber > currentHeight ? currentHeight : tempBlockNumber;
-
-        console.log(`[OrderPriceChanged] Sync ${orderPriceChangedJobCurrent} ~ ${toBlock} ...`)
-
-        pasarContractWs.getPastEvents('OrderPriceChanged', {
-            fromBlock: orderPriceChangedJobCurrent, toBlock
-        }).then(events => {
-            events.forEach(event => {
-                let orderInfo = event.returnValues;
-                let orderEventDetail = {orderId: orderInfo._orderId, event: event.event, blockNumber: event.blockNumber,
-                    tHash: event.transactionHash, tIndex: event.transactionIndex, blockHash: event.blockHash,
-                    logIndex: event.logIndex, removed: event.removed, id: event.id}
-
-                pasarDBService.insertOrderEvent(orderEventDetail);
-                updateOrder(orderInfo._orderId, event.blockNumber, 'OrderPriceChanged');
-            })
-
-            orderPriceChangedJobCurrent = toBlock + 1;
-        }).catch( error => {
-            console.log(error);
-            console.log("[OrderPriceChanged] Sync Ending ...");
         })
     });
 
