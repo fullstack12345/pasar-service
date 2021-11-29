@@ -62,7 +62,7 @@ module.exports = {
 
                     await pasarDBService.replaceDid({address: result.sellerAddr, did: pasarOrder.sellerDid});
                 }
-                await pasarDBService.updateOrInsert(pasarOrder);
+                await pasarDBService.updateOrInsert(pasarOrder, blockNumber);
             } catch(error) {
                 logger.info(error);
                 logger.info(`[OrderForSale] Sync - getOrderById(${orderId}) call error`);
@@ -133,7 +133,7 @@ module.exports = {
             })
         });
 
-        let orderFilledJobId = schedule.scheduleJob(new Date(now + 2 * 60 * 1000), async () => {
+        let orderFilledJobId = schedule.scheduleJob(new Date(now + 3 * 60 * 1000), async () => {
             let lastHeight = await pasarDBService.getLastPasarOrderSyncHeight('OrderFilled');
 
             logger.info(`[OrderFilled] Sync start from height: ${lastHeight}`);
@@ -155,7 +155,7 @@ module.exports = {
             })
         });
 
-        let orderCanceledJobId = schedule.scheduleJob(new Date(now + 2 * 60 * 1000), async () => {
+        let orderCanceledJobId = schedule.scheduleJob(new Date(now + 3 * 60 * 1000), async () => {
             let lastHeight = await pasarDBService.getLastPasarOrderSyncHeight('OrderCanceled');
 
             logger.info(`[OrderCanceled] Sync start from height: ${lastHeight}`);
@@ -177,7 +177,7 @@ module.exports = {
             })
         });
 
-        let orderPriceChangedJobId = schedule.scheduleJob(new Date(now + 3 * 60 * 1000), async () => {
+        let orderPriceChangedJobId = schedule.scheduleJob(new Date(now + 2 * 60 * 1000), async () => {
             let lastHeight = await pasarDBService.getLastPasarOrderSyncHeight('OrderPriceChanged');
 
             logger.info(`[OrderPriceChanged] Sync start from height: ${lastHeight}`);
@@ -215,6 +215,7 @@ module.exports = {
                 let from = event.returnValues._from;
                 let to = event.returnValues._to;
 
+                //After contract upgrade, this job just deal Mint and Burn event
                 if(from !== burnAddress && to !== burnAddress && blockNumber > config.upgradeBlock) {
                     return;
                 }

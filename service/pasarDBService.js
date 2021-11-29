@@ -22,7 +22,7 @@ module.exports = {
         }
     },
 
-    updateOrInsert: async function (pasarOrder) {
+    updateOrInsert: async function (pasarOrder, blockNumber) {
         let {orderId, ...rest} = pasarOrder;
         let mongoClient = new MongoClient(config.mongodb, {useNewUrlParser: true, useUnifiedTopology: true});
         try {

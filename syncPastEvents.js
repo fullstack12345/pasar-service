@@ -29,8 +29,7 @@ let stickerContract = new web3Rpc.eth.Contract(stickerContractABI, config.sticke
 let now = Date.now();
 const burnAddress = '0x0000000000000000000000000000000000000000';
 
-let updateOrder = async function(orderId, blockNumber) {
-    console.log(`[GetOrderInfo] orderId: ${orderId}   blockNumber: ${blockNumber}`);
+let updateOrder = async function(orderId, blockNumber, eventType) {
     try {
         let result = await pasarContract.methods.getOrderById(orderId).call();
         let pasarOrder = {orderId: result.orderId, orderType: result.orderType, orderState: result.orderState,
@@ -51,7 +50,10 @@ let updateOrder = async function(orderId, blockNumber) {
 
             await pasarDBService.replaceDid({address: result.sellerAddr, did: pasarOrder.sellerDid});
         }
-        await pasarDBService.updateOrInsert(pasarOrder);
+        let res = await pasarDBService.updateOrInsert(pasarOrder);
+        if(res.modifiedCount !== 1 && res.upsertedCount !== 1) {
+            console.log(`#############################[${eventType}]  update or insert orderInfo error : ${JSON.stringify(pasarOrder)}`)
+        }
     } catch(error) {
         console.log(error);
         console.log(`[OrderForSale] Sync - getOrderById(${orderId}) call error`);
@@ -88,7 +90,7 @@ web3Rpc.eth.getBlockNumber().then(currentHeight => {
 
                 console.log(`[OrderForSale] orderEventDetail: ${JSON.stringify(orderEventDetail)}`)
                 await pasarDBService.insertOrderEvent(orderEventDetail);
-                await updateOrder(orderInfo._orderId, event.blockNumber);
+                await updateOrder(orderInfo._orderId, event.blockNumber, 'OrderForSale');
             })
             orderForSaleJobCurrent = toBlock + 1;
         }).catch(error => {
@@ -118,7 +120,7 @@ web3Rpc.eth.getBlockNumber().then(currentHeight => {
                     logIndex: event.logIndex, removed: event.removed, id: event.id}
 
                 pasarDBService.insertOrderEvent(orderEventDetail);
-                updateOrder(orderInfo._orderId, event.blockNumber);
+                updateOrder(orderInfo._orderId, event.blockNumber, 'OrderFilled');
             })
             orderFilledJobCurrent = toBlock + 1;
         }).catch( error => {
@@ -148,7 +150,7 @@ web3Rpc.eth.getBlockNumber().then(currentHeight => {
                     logIndex: event.logIndex, removed: event.removed, id: event.id};
 
                 pasarDBService.insertOrderEvent(orderEventDetail);
-                updateOrder(orderInfo._orderId, event.blockNumber);
+                updateOrder(orderInfo._orderId, event.blockNumber, 'OrderCanceled');
             })
             orderCanceledJobCurrent = toBlock + 1;
         }).catch( error => {
@@ -158,7 +160,7 @@ web3Rpc.eth.getBlockNumber().then(currentHeight => {
     });
 
 
-    schedule.scheduleJob({start: new Date(now + 4 * 60 * 1000), rule: '30 * * * * *'}, async () => {
+    schedule.scheduleJob({start: new Date(now + 2 * 60 * 1000), rule: '30 * * * * *'}, async () => {
         if(orderPriceChangedJobCurrent > currentHeight) {
             console.log(`[OrderPriceChanged] Sync ${orderPriceChangedJobCurrent} finished`)
             return;
@@ -179,7 +181,7 @@ web3Rpc.eth.getBlockNumber().then(currentHeight => {
                     logIndex: event.logIndex, removed: event.removed, id: event.id}
 
                 pasarDBService.insertOrderEvent(orderEventDetail);
-                updateOrder(orderInfo._orderId, event.blockNumber);
+                updateOrder(orderInfo._orderId, event.blockNumber, 'OrderPriceChanged');
             })
 
             orderPriceChangedJobCurrent = toBlock + 1;
