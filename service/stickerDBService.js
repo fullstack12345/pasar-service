@@ -171,6 +171,19 @@ module.exports = {
         }
     },
 
+    stickerOrderEventCount: async function(startBlock, endBlock) {
+        let mongoClient = new MongoClient(config.mongodb, {useNewUrlParser: true, useUnifiedTopology: true});
+        try {
+            await mongoClient.connect();
+            const collection = mongoClient.db(config.dbName).collection('pasar_token_event');
+            return await collection.find({blockNumber: {$gte: startBlock, $lte: endBlock}}).count();
+        } catch (err) {
+            logger.error(err);
+        } finally {
+            await mongoClient.close();
+        }
+    },
+
     tokenTrans: async function(tokenId) {
         let mongoClient = new MongoClient(config.mongodb, {useNewUrlParser: true, useUnifiedTopology: true});
         try {

@@ -324,20 +324,53 @@ module.exports = {
          *  Pasar order event volume check
          */
         let pasarOrderEventCheckBlockNumber = config.pasarContractDeploy;
-        schedule.scheduleJob({start: new Date(now + 10* 60 * 1000), rule: '*/2 * * * *'}, async () => {
-            endBlock
-            let orderCount = await pasarDBService.pasarOrderEventCount(startBlock, endBlock);
-            let orderCountContract = parseInt(await pasarContract.methods.getOrderCount().call());
-            logger.info(`[Order Count Check] DbCount: ${orderCount}   ContractCount: ${orderCountContract}`)
-            if(orderCountContract !== orderCount) {
+        schedule.scheduleJob({start: new Date(now + 10* 60 * 1000), rule: '*/5 * * * *'}, async () => {
+            let nowBlock = await web3Rpc.eth.getBlockNumber();
+            let fromBlock = pasarOrderEventCheckBlockNumber;
+            let tempBlock = pasarOrderEventCheckBlockNumber + 20000
+            let toBlock =  tempBlock > nowBlock ? nowBlock : tempBlock;
+            let orderCount = await pasarDBService.pasarOrderEventCount(fromBlock, toBlock);
+
+            let orderForSaleEvent = await pasarContract.getPastEvents('OrderForSale', {fromBlock, toBlock});
+            let orderFilledEvent = await pasarContract.getPastEvents('OrderFilled', {fromBlock, toBlock});
+            let orderCanceled = await pasarContract.getPastEvents('OrderCanceled', {fromBlock, toBlock});
+            let orderPriceChanged = await pasarContract.getPastEvents('OrderPriceChanged', {fromBlock, toBlock});
+            let contractOrderCount = orderForSaleEvent.length + orderFilledEvent.length + orderCanceled.length + orderPriceChanged.length;
+
+            if(orderCount !== contractOrderCount) {
+                logger.info(`Order Event Count Check: StartBlock: ${fromBlock}    EndBlock: ${toBlock}`);
+                logger.info(`Order Event Count Check: DBEventCount: ${orderCount}    ContractEventCount: ${contractOrderCount}`);
                 await sendMail(`Pasar Order Sync [${config.serviceName}]`,
-                    `pasar assist sync service sync failed!\nDbCount: ${orderCount}   ContractCount: ${orderCountContract}`,
+                    `pasar assist sync service sync failed!\nDbEventCount: ${orderCount}   ContractEventCount: ${contractOrderCount}`,
                     recipients.join());
             }
+
+            pasarOrderEventCheckBlockNumber = toBlock + 1;
         });
 
         /**
          *  Sticker transfer event volume check
          */
+        let stickerEventCheckBlockNumber = config.stickerContractDeploy;
+        schedule.scheduleJob({start: new Date(now + 10* 60 * 1000), rule: '*/5 * * * *'}, async () => {
+            let nowBlock = await web3Rpc.eth.getBlockNumber();
+            let fromBlock = stickerEventCheckBlockNumber;
+            let tempBlock = stickerEventCheckBlockNumber + 20000
+            let toBlock =  tempBlock > nowBlock ? nowBlock : tempBlock;
+            let stickerEventCountDB = await stickerDBService.stickerOrderEventCount(fromBlock, toBlock);
+
+            let stickerEvent = await stickerContract.getPastEvents('TransferSingle', {fromBlock, toBlock});
+            let stickerEventCount = stickerEvent.length;
+
+            if(stickerEventCountDB !== stickerEventCount) {
+                logger.info(`Sticker Event Count Check: StartBlock: ${fromBlock}    EndBlock: ${toBlock}`);
+                logger.info(`Sticker Event Count Check: DBEventCount: ${stickerEventCountDB}    ContractEventCount: ${stickerEventCount}`);
+                await sendMail(`Pasar Order Sync [${config.serviceName}]`,
+                    `pasar assist sync service sync failed!\nDbEventCount: ${stickerEventCountDB}   ContractEventCount: ${stickerEventCount}`,
+                    recipients.join());
+            }
+
+            stickerEventCheckBlockNumber = toBlock + 1;
+        });
     }
 }

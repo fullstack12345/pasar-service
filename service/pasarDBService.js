@@ -183,5 +183,18 @@ module.exports = {
         } finally {
             await mongoClient.close();
         }
+    },
+
+    pasarOrderEventCount: async function(startBlock, endBlock) {
+        let mongoClient = new MongoClient(config.mongodb, {useNewUrlParser: true, useUnifiedTopology: true});
+        try {
+            await mongoClient.connect();
+            const collection = mongoClient.db(config.dbName).collection('pasar_order_event');
+            return await collection.find({blockNumber: {$gte: startBlock, $lte: endBlock}}).count();
+        } catch (err) {
+            logger.error(err);
+        } finally {
+            await mongoClient.close();
+        }
     }
 }
