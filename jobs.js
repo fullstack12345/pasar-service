@@ -64,7 +64,7 @@ module.exports = {
                         await pasarDBService.replaceDid({address: result.sellerAddr, did: pasarOrder.sellerDid});
                     }
                 }
-                let res = await pasarDBService.updateOrInsert(pasarOrder, blockNumber);
+                let res = await pasarDBService.updateOrInsert(pasarOrder);
                 if(res.modifiedCount !== 1 && res.upsertedCount !== 1) {
                     console.log('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>')
                     console.log(`${eventType}]  update or insert order info error : ${JSON.stringify(pasarOrder)}`)
@@ -99,16 +99,17 @@ module.exports = {
 
                 if(blockNumber > config.upgradeBlock) {
                     let extraInfo = await stickerContract.methods.tokenExtraInfo(tokenId).call();
-                    token.didUri = extraInfo.didUri;
+                    if(extraInfo.didUri !== '') {
+                        token.didUri = extraInfo.didUri;
 
-                    let creatorCID = extraInfo.didUri.split(":")[2];
-                    let response = await fetch(config.ipfsNodeUrl + creatorCID);
-                    token.did = await response.json();
+                        let creatorCID = extraInfo.didUri.split(":")[2];
+                        let response = await fetch(config.ipfsNodeUrl + creatorCID);
+                        token.did = await response.json();
 
-                    logger.info(`[TokenInfo] New token info: ${JSON.stringify(token)}`)
-                    await pasarDBService.replaceDid({address: result.royaltyOwner, did: token.did});
+                        logger.info(`[TokenInfo] New token info: ${JSON.stringify(token)}`)
+                        await pasarDBService.replaceDid({address: result.royaltyOwner, did: token.did});
+                    }
                 }
-
                 await stickerDBService.replaceToken(token);
             } catch (e) {
                 logger.info(`[TokenInfo] Sync error at ${blockNumber} ${tokenId}`);
@@ -292,7 +293,7 @@ module.exports = {
         });
 
         /**
-         *  Pasar order sync check
+         *  Pasar order volume sync check
          */
         schedule.scheduleJob({start: new Date(now + 60 * 1000), rule: '*/2 * * * *'}, async () => {
             let orderCount = await pasarDBService.pasarOrderCount();
@@ -306,7 +307,7 @@ module.exports = {
         });
 
         /**
-         *  Sticker sync check
+         *  Sticker volume sync check
          */
         schedule.scheduleJob({start: new Date(now + 60 * 1000), rule: '*/2 * * * *'}, async () => {
             let stickerCount = await stickerDBService.stickerCount();
@@ -318,5 +319,25 @@ module.exports = {
                     recipients.join());
             }
         });
+
+        /**
+         *  Pasar order event volume check
+         */
+        let pasarOrderEventCheckBlockNumber = config.pasarContractDeploy;
+        schedule.scheduleJob({start: new Date(now + 10* 60 * 1000), rule: '*/2 * * * *'}, async () => {
+            endBlock
+            let orderCount = await pasarDBService.pasarOrderEventCount(startBlock, endBlock);
+            let orderCountContract = parseInt(await pasarContract.methods.getOrderCount().call());
+            logger.info(`[Order Count Check] DbCount: ${orderCount}   ContractCount: ${orderCountContract}`)
+            if(orderCountContract !== orderCount) {
+                await sendMail(`Pasar Order Sync [${config.serviceName}]`,
+                    `pasar assist sync service sync failed!\nDbCount: ${orderCount}   ContractCount: ${orderCountContract}`,
+                    recipients.join());
+            }
+        });
+
+        /**
+         *  Sticker transfer event volume check
+         */
     }
 }

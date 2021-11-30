@@ -21,13 +21,13 @@ module.exports = {
         }
     },
 
-    updateOrInsert: async function (pasarOrder, blockNumber) {
+    updateOrInsert: async function (pasarOrder) {
         let {orderId, ...rest} = pasarOrder;
         let mongoClient = new MongoClient(config.mongodb, {useNewUrlParser: true, useUnifiedTopology: true});
         try {
             await mongoClient.connect();
             const collection = mongoClient.db(config.dbName).collection('pasar_order');
-            return await collection.updateOne({orderId, blockNumber: {$lt: blockNumber}}, {$set: rest}, {upsert: true});
+            return await collection.updateOne({orderId}, {$set: rest}, {upsert: true});
         } catch (err) {
             logger.error(err);
             throw new Error();

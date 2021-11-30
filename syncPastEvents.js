@@ -71,7 +71,7 @@ let orderForSaleJobCurrent = config.pasarContractDeploy,
     tokenInfoSyncJobCurrent = config.stickerContractDeploy,
     tokenInfoMemoSyncJobCurrent = config.stickerContractDeploy;
 
-const step = 5000;
+const step = 20000;
 web3Rpc.eth.getBlockNumber().then(currentHeight => {
     schedule.scheduleJob({start: new Date(now + 60 * 1000), rule: '0 * * * * *'}, async () => {
         if(orderForSaleJobCurrent > currentHeight) {
