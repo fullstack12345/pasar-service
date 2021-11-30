@@ -40,15 +40,17 @@ let updateOrder = async function(orderId, blockNumber, eventType) {
 
         if(result.orderState === "1" && blockNumber > config.upgradeBlock) {
             let extraInfo = await pasarContract.methods.getOrderExtraById(orderId).call();
-            pasarOrder.platformAddr = extraInfo.platformAddr;
-            pasarOrder.platformFee = extraInfo.platformFee;
-            pasarOrder.sellerUri = extraInfo.sellerUri;
+            if(extraInfo.sellerUri !== '') {
+                pasarOrder.platformAddr = extraInfo.platformAddr;
+                pasarOrder.platformFee = extraInfo.platformFee;
+                pasarOrder.sellerUri = extraInfo.sellerUri;
 
-            let tokenCID = extraInfo.sellerUri.split(":")[2];
-            let response = await fetch(config.ipfsNodeUrl + tokenCID);
-            pasarOrder.sellerDid = await response.json();
+                let tokenCID = extraInfo.sellerUri.split(":")[2];
+                let response = await fetch(config.ipfsNodeUrl + tokenCID);
+                pasarOrder.sellerDid = await response.json();
 
-            await pasarDBService.replaceDid({address: result.sellerAddr, did: pasarOrder.sellerDid});
+                await pasarDBService.replaceDid({address: result.sellerAddr, did: pasarOrder.sellerDid});
+            }
         }
         let res = await pasarDBService.updateOrInsert(pasarOrder, blockNumber);
         if(res.modifiedCount !== 1 && res.upsertedCount !== 1) {
