@@ -50,6 +50,20 @@ module.exports = {
         }
     },
 
+    replaceEvent: async function(transferEvent) {
+        let client = new MongoClient(config.mongodb, {useNewUrlParser: true, useUnifiedTopology: true});
+        let {tokenId, blockNumber} = transferEvent
+        try {
+            await client.connect();
+            const collection = client.db(config.dbName).collection('pasar_token_event');
+            await collection.replaceOne({tokenId, blockNumber}, transferEvent, {upsert: true});
+        } catch (err) {
+            logger.error(err);
+        } finally {
+            await client.close();
+        }
+    },
+
     burnToken: async function (tokenId) {
         let mongoClient = new MongoClient(config.mongodb, {useNewUrlParser: true, useUnifiedTopology: true});
         try {

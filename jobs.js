@@ -233,8 +233,8 @@ module.exports = {
                 let timestamp = (await web3Rpc.eth.getBlock(blockNumber)).timestamp;
 
                 let transferEvent = {tokenId, blockNumber, timestamp, from, to, value}
-                await stickerDBService.addEvent(transferEvent);
                 logger.info(`[TokenInfo] tokenEvent: ${JSON.stringify(transferEvent)}`)
+                await stickerDBService.replaceEvent(transferEvent);
 
                 if(to === burnAddress) {
                     await stickerDBService.burnToken(tokenId);
@@ -267,8 +267,8 @@ module.exports = {
                 let timestamp = (await web3Rpc.eth.getBlock(blockNumber)).timestamp;
 
                 let transferEvent = {tokenId, blockNumber, timestamp, from, to, value, memo}
-                await stickerDBService.addEvent(transferEvent);
                 logger.info(`[TokenInfoWithMemo] transferToken: ${JSON.stringify(transferEvent)}`)
+                await stickerDBService.addEvent(transferEvent);
                 await stickerDBService.updateToken(tokenId, to, timestamp);
             })
         });
