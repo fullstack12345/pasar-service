@@ -2,8 +2,6 @@ let express = require('express');
 let cookieParser = require('cookie-parser');
 let bodyParser = require('body-parser');
 let indexRouter = require('./routes/index');
-let indexRouterV2 = require('./routes/indexV2');
-let indexRouterV3 = require('./routes/indexV3');
 let pasarApi = require('./routes/pasarApi');
 let stickerApi = require('./routes/stickerApi');
 let jobs = require('./jobs');
@@ -22,16 +20,14 @@ global.logger = log4js.getLogger('default');
 
 let app = express();
 
-app.use(bodyParser.json({limit: '500mb'}));
-app.use(bodyParser.urlencoded({limit: '500mb', extended: true}));
+app.use(bodyParser.json({limit: '50mb'}));
+app.use(bodyParser.urlencoded({limit: '50mb', extended: true}));
 app.use(log4js.connectLogger(logger, { level: log4js.levels.INFO }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 
 app.use('/feeds/api/v1', indexRouter);
-app.use('/feeds/api/v2', indexRouterV2);
-app.use('/feeds/api/v3', indexRouterV3);
 app.use('/pasar/api/v1', pasarApi);
 app.use('/sticker/api/v1', stickerApi);
 

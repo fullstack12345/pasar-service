@@ -23,9 +23,8 @@ $ sudo pm2 install pm2-intercom
 ```bash
 $ mongo
 > use feeds_sources;
-> db.feeds_sources.createIndex({did: 1}, {unique: true});
-> db.feeds.createIndex({feedsUrlHash: 1}, {unique: true});
-> db.nft_token.createIndex({tokenId: 1}, {unique: true});
+> db.pasar_order.createIndex({orderId: 1}, {unique: true});
+> db.pasar_token.createIndex({tokenId: 1}, {unique: true});
 ```
 
 ### 运行服务
@@ -39,210 +38,7 @@ pm2 start bin/www
 
 ## API
 
-调用URL: `https://example.com/feeds/api/v1`
-
-1. 注册
-
-```
-url:          /register
-method:       POST
-content-type: application/json
-parameter:    did (service did 必填)
-              name (feeds source name 必填)
-              description (feeds source description 选填)
-              url (feeds source url 必填)
-              
-response:     {"code": 200, "message": "success"}  成功  
-              {"code": 400, "message": <descripton>}  参数错误  
-              {"code": 500, "message": <descripton>}  服务器错误  
-```
-
-2. 修改
-
-```
-url:          /update
-method:       POST
-content-type: application/json
-parameter:    did (必填)
-              name (选填)
-              description (选填)
-              
-response:     {"code": 200, "message": "success"}  成功
-              {"code": 400, "message": <descripton>}  参数错误
-              {"code": 500, "message": <descripton>}  服务器错误
-```
-
-3. 删除
-
-```
-url:          /remove  
-method:       GET
-parameter:    did (service did 必填)
-
-response:     {"code": 200, "message": "success"}  成功
-              {"code": 400, "message": <descripton>}  参数错误
-              {"code": 500, "message": <descripton>}  服务器错误
-```
-
-4. 所有列表
-
-```
-url:          /listAll
-method:       GET
-
-response:     {"code": 200, "message": "success", data: [{},...]}  成功
-              {"code": 500, "message": <descripton>}  服务器错误
-```
-
-5. 分页列表
-
-```
-url:          /listPage  
-method:       GET
-parameter:    pageNum (页码 从1开始 必填)
-              pageSize (每页条目 大于0 必填)
-              
-response:     {"code": 200, "message": "success", data: {total: 100, result: [{}, ...]}}  成功
-              {"code": 400, "message": <descripton>}  参数错误
-              {"code": 500, "message": <descripton>}  服务器错误
-```
-
-6. 根据did获取
-
-```
-url:          /get
-method:       GET
-parameter:    did (did 必填)
-
-response:     {"code": 200, "message": "success", data: {...}}  数据存在
-              {"code": 200, "message": "success"}  数据不存在
-              {"code": 400, "message": <descripton>}  参数错误
-              {"code": 500, "message": <descripton>}  服务器错误
-```
-
-## API V2
-
-调用URL: https://example.com/feeds/api/v2
-
-1. 注册
-
-```
-url:          /register
-method:       POST
-content-type: application/json
-parameter:    did (service did 必填)
-              name (feeds source name 必填)
-              description (feeds source description 选填)
-              url (feeds source url 必填)
-              feedsUrlHash (feeds source url hash 必填)
-              feedsAvatar (选填)
-              followers (选填)
-              ownerName (选填)
-              
-response:     {"code": 200, "message": "success"}  成功  
-              {"code": 400, "message": <descripton>}  参数错误  
-              {"code": 500, "message": <descripton>}  服务器错误  
-```
-
-2. 修改
-
-```
-url:          /update
-method:       POST
-content-type: application/json
-parameter:    feedsUrlHash (必填)
-              name (选填)
-              description (选填)
-              feedsAvatar (选填)
-              followers (选填)
-              ownerName (选填)
-              
-response:     {"code": 200, "message": "success"}  成功
-              {"code": 400, "message": <descripton>}  参数错误
-              {"code": 500, "message": <descripton>}  服务器错误
-```
-
-3. 删除
-
-```
-url:          /remove  
-method:       GET
-parameter:    feedsUrlHash (必填)
-
-response:     {"code": 200, "message": "success"}  成功
-              {"code": 400, "message": <descripton>}  参数错误
-              {"code": 500, "message": <descripton>}  服务器错误
-```
-
-4. 所有列表
-
-```
-url:          /listAll
-method:       GET
-
-response:     {"code": 200, "message": "success", data: [{},...]}  成功
-              {"code": 500, "message": <descripton>}  服务器错误
-```
-
-5. 分页列表
-
-```
-url:          /listPage  
-method:       GET
-parameter:    pageNum (页码 从1开始 必填)
-              pageSize (每页条目 大于0 必填)
-              
-response:     {"code": 200, "message": "success", data: {total: 100, result: [{}, ...]}}  成功
-              {"code": 400, "message": <descripton>}  参数错误
-              {"code": 500, "message": <descripton>}  服务器错误
-```
-
-6. 根据 `feedsUrlHash` 获取
-
-```
-url:          /get
-method:       GET
-parameter:    feedsUrlHash (必填)
-
-response:     {"code": 200, "message": "success", data: {...}}  数据存在
-              {"code": 200, "message": "success"}  数据不存在
-              {"code": 400, "message": <descripton>}  参数错误
-              {"code": 500, "message": <descripton>}  服务器错误
-```
-
-## API V3
-
-包含V2接口的 `get` `listAll` 和 `listPage`，但是去掉了返回值中的 `feedsAvatar` 和 `_id`
-
-调用URL: `https://www.trinity-tech.io/feeds/api/v3`
-
-1. 根据 `feedsUrlHash` 获取 `feedsAvatar`
-
-```
-url:          /getAvatar
-method:       GET
-parameter:    feedsUrlHash (必填)
-
-response:     {"code": 200, "message": "success", data: {...}}  数据存在
-              {"code": 200, "message": "success"}  数据不存在
-              {"code": 400, "message": <descripton>}  参数错误
-              {"code": 500, "message": <descripton>}  服务器错误
-```
-
-2. 根据 `feedsUrlHash` 列表获取对应的 `feedsAvatar`
-
-```
-url:          /getAvatar
-method:       POST
-parameter:    ["feedsUrlHash1","feedsUrlHash2",.....] (必填)
-
-response:     {"code": 200, "message": "success", data: {...}}  数据存在
-              {"code": 200, "message": "success"}  数据不存在
-              {"code": 400, "message": <descripton>}  参数错误
-              {"code": 500, "message": <descripton>}  服务器错误
-```
-
-## Pasar API
+### Pasar API
 
 调用URL: `https://example.com/pasar/api/v1`
 
@@ -334,7 +130,7 @@ response:     {"code": 200, "message": "success", data: [{}, ...]}  成功
               {"code": 500, "message": <descripton>}  服务器错误
 ```
 
-## Sticker API
+### Sticker API
 
 调用URL: `https://example.com/sticker/api/v1`
 
@@ -386,4 +182,168 @@ parameter:    tokenId ( tokenID 必选)
 response:     {"code": 200, "message": "success", data: [{}, ...]  成功
               {"code": 400, "message": <descripton>}  参数错误
               {"code": 500, "message": <descripton>}  服务器错误
+```
+
+## API V2
+
+1. Query collectible by tokenId
+
+```
+GET /collectible/tokenId/{tokenId}
+```
+
+2. Query collectibles by creator
+
+```
+GET /collectibles/creator/{creator}
+```
+
+3. Query collectibles by owner
+
+```
+GET /collectibles/owner/{owner}
+```
+
+4. Query collectibles by name & description
+
+```
+GET /collectibles/keyword/{keyword}
+```
+
+5. List all collectibles
+
+```
+GET /collectibles/all
+```
+
+6. List all creators
+
+```
+GET /creators/all
+```
+
+7. Query filled orders by tokenId
+
+```
+GET /orders/filled/tokenId/{tokenId}
+```
+
+8. Query filled orders by seller
+
+```
+GET /orders/filled/seller/{seller}
+```
+
+9. Query filled orders by buyer
+
+```
+GET /orders/filled/buyer/{buyer}
+```
+
+10. Query filled orders by collectible name & description
+
+```
+GET /orders/filled/keyword/{keyword}
+```
+
+10. List all filled orders
+
+```
+GET /orders/filled/all
+```
+
+11. Query canceled orders by tokenId
+
+```
+GET /orders/canceled/tokenId/{tokenId}
+```
+
+12. Query canceled orders by seller
+
+```
+GET /orders/canceled/seller/{seller}
+```
+
+13. Query price changed orders by tokenId
+
+```
+GET /orders/priceChanged/tokenId/{tokenId}
+```
+
+14. Query price changed orders by seller
+
+```
+GET /orders/priceChanged/seller/{seller}
+```
+
+15. Query on-sale orders by tokenId
+
+```
+GET /orders/sale/tokenId/{tokenId}
+```
+
+16. Query on-sale orders by seller address
+
+```
+GET /orders/sale/seller/{seller}
+```
+
+17. Query on-sale orders by royalty owner
+
+```
+GET /orders/sale/owner/{owner}
+```
+
+18. Query giveaways by tokenId
+
+```
+GET /transfers/tokenId/{tokenId}
+```
+
+19. Query giveaways by sending address
+
+```
+GET /transfers/sender/{sender}
+```
+
+20. Query giveaways by receiver address
+
+```
+GET /transfers/receiver/{receiver}
+```
+
+21.Query giveaways by royalty owner
+
+```
+GET /transfers/owner/{owner}
+```
+
+22. Query giveaways by collectible name & description
+
+```
+GET /transfers/owner/{owner}
+```
+
+23. Query transaction volume in total to the specific collectible token
+
+```
+GET /transVolume/tokenId/{tokenId}
+```
+
+24. Query transaction volume in total to specific creator address
+
+```
+GET /transVolume/creator/{creator}
+```
+
+25. Query transaction volume in total to specific seller address
+
+```
+GET /transVolume/seller/{seller}
+```
+
+26. Query transaction volume in total to specific receiver address
+
+```
+GET /transVolume/receiver/{seller}
 ```

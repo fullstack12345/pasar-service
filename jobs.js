@@ -61,7 +61,7 @@ module.exports = {
                         let response = await fetch(config.ipfsNodeUrl + tokenCID);
                         pasarOrder.sellerDid = await response.json();
 
-                        await pasarDBService.replaceDid({address: result.sellerAddr, did: pasarOrder.sellerDid});
+                        await pasarDBService.replaceDid({address: result.sellerAddr, didStr: pasarOrder.sellerDid.did, did: pasarOrder.sellerDid});
                     }
                 }
                 let res = await pasarDBService.updateOrInsert(pasarOrder);
@@ -107,7 +107,7 @@ module.exports = {
                         token.did = await response.json();
 
                         logger.info(`[TokenInfo] New token info: ${JSON.stringify(token)}`)
-                        await pasarDBService.replaceDid({address: result.royaltyOwner, did: token.did});
+                        await pasarDBService.replaceDid({address: result.royaltyOwner,didStr: token.did.did, did: token.did});
                     }
                 }
                 await stickerDBService.replaceToken(token);
