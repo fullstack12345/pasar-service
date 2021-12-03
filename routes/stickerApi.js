@@ -54,13 +54,36 @@ router.get('/search', function(req, res) {
 router.get('/query', function(req, res) {
     let owner = req.query.owner;
     let creator = req.query.creator;
+    let typesStr = req.query.types;
+
+    let error = 0;
+    let types = undefined;
+    if(typesStr !== undefined) {
+        if(typeof typesStr !== "object") {
+            types = [typesStr];
+        } else {
+            types = typesStr;
+        }
+        const typesDef = ['image', 'avatar', 'feeds-channel'];
+        types.forEach(item => {
+            logger.info(item)
+            if(!typesDef.includes(item)) {
+                res.json({code: 400, message: 'bad request'});
+                error = 1;
+                return false;
+            }
+        })
+    }
+    if(error === 1) {
+        return;
+    }
 
     if(!owner && !creator) {
         res.json({code: 400, message: 'bad request'})
         return;
     }
 
-    stickerDBService.query(owner, creator).then(result => {
+    stickerDBService.query(owner, creator, types).then(result => {
         res.json(result);
     }).catch(error => {
         console.log(error);
