@@ -18,7 +18,7 @@ async function checkTokenHolder() {
         collection = mongoClient.db(config.dbName).collection('pasar_token_event');
 
         let result2 = await collection.find({ $or: [{from: burnAddress}, {to: burnAddress}]})
-            .project({"_id": 0,tokenId:1, from: 1, to: 1, blockNumber: 1}).sort({blockNumber: -1}).toArray();
+            .project({"_id": 0,tokenId:1, from: 1, to: 1, blockNumber: 1}).sort({blockNumber: 1}).toArray();
 
         let a2 = new Map();
         result2.forEach(item => {
@@ -41,4 +41,3 @@ async function checkTokenHolder() {
 }
 
 checkTokenHolder().then(console.log)
-
