@@ -233,7 +233,7 @@ web3Rpc.eth.getBlockNumber().then(currentHeight => {
                 await stickerDBService.addEvent(transferEvent);
 
                 if(to === burnAddress) {
-                    await stickerDBService.burnToken(tokenId);
+                    // await stickerDBService.burnToken(tokenId);
                 } else if(from === burnAddress) {
                     try {
                         let result = await stickerContract.methods.tokenInfo(tokenId).call();
