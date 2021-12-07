@@ -155,7 +155,8 @@ module.exports = {
                 let orderInfo = event.returnValues;
                 let orderEventDetail = {orderId: orderInfo._orderId, event: event.event, blockNumber: event.blockNumber,
                     tHash: event.transactionHash, tIndex: event.transactionIndex, blockHash: event.blockHash,
-                    logIndex: event.logIndex, removed: event.removed, id: event.id}
+                    logIndex: event.logIndex, removed: event.removed, id: event.id,
+                    data: {oldPrice: orderInfo._oldPrice, newPrice: orderInfo._newPrice}}
 
                 logger.info(`[OrderPriceChanged] orderEventDetail: ${JSON.stringify(orderEventDetail)}`)
                 await pasarDBService.insertOrderEvent(orderEventDetail);
